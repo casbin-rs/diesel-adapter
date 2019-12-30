@@ -373,49 +373,90 @@ mod tests {
         let adapter = DieselAdapter::new(conn_opts);
         assert!(adapter.is_ok());
 
+        // docker run -itd \
+        //     --restart always \
+        //         -e POSTGRES_USER=casbin_rs \
+        //         -e POSTGRES_PASSWORD=casbin_rs \
+        //         -e POSTGRES_DB=casbin \
+        //         -p 5432:5432 \
+        //     -v /srv/docker/postgresql:/var/lib/postgresql \
+        //     postgres:11;
+        //
+        //
+        //  sudo apt install postgresql-client-11
+        //  psql postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin;
+
         if let Ok(mut adapter) = adapter {
-            adapter.save_policy(&mut e.model);
+            assert!(adapter.save_policy(&mut e.model).is_ok());
 
-            assert!(adapter.remove_policy("", "p", vec!["alice", "data1", "read"]));
-            assert!(adapter.remove_policy("", "p", vec!["bob", "data2", "write"]));
-            assert!(adapter.remove_policy("", "p", vec!["data2_admin", "data2", "read"]));
-            assert!(adapter.remove_policy("", "p", vec!["data2_admin", "data2", "write"]));
-            assert!(adapter.remove_policy("", "g", vec!["alice", "data2_admin"]));
+            assert!(adapter
+                .remove_policy("", "p", vec!["alice", "data1", "read"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["bob", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin"])
+                .is_ok());
 
-            assert!(adapter.add_policy("", "p", vec!["alice", "data1", "read"]));
-            assert!(adapter.add_policy("", "p", vec!["bob", "data2", "write"]));
-            assert!(adapter.add_policy("", "p", vec!["data2_admin", "data2", "read"]));
-            assert!(adapter.add_policy("", "p", vec!["data2_admin", "data2", "write"]));
-            assert!(adapter.add_policy("", "g", vec!["alice", "data2_admin"]));
+            assert!(adapter
+                .add_policy("", "p", vec!["alice", "data1", "read"])
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["bob", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin"])
+                .is_ok());
 
-            assert!(adapter.remove_policy("", "p", vec!["alice", "data1", "read"]));
-            assert!(adapter.remove_policy("", "p", vec!["bob", "data2", "write"]));
-            assert!(adapter.remove_policy("", "p", vec!["data2_admin", "data2", "read"]));
-            assert!(adapter.remove_policy("", "p", vec!["data2_admin", "data2", "write"]));
-            assert!(adapter.remove_policy("", "g", vec!["alice", "data2_admin"]));
+            assert!(adapter
+                .remove_policy("", "p", vec!["alice", "data1", "read"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["bob", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin"])
+                .is_ok());
 
-            assert!(!adapter.remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"]));
+            assert!(!adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
+                .is_ok());
 
-            assert!(adapter.add_policy("", "g", vec!["alice", "data2_admin"]));
-            assert!(!adapter.remove_filtered_policy(
-                "",
-                "g",
-                0,
-                vec!["alice", "data2_admin", "not_exists"],
-            ));
-            assert!(adapter.remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"]));
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin"])
+                .is_ok());
+            assert!(!adapter
+                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
+                .is_ok());
+            assert!(adapter
+                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
+                .is_ok());
 
-            assert!(adapter.add_policy(
-                "",
-                "g",
-                vec!["alice", "data2_admin", "domain1", "domain2"],
-            ));
-            assert!(adapter.remove_filtered_policy(
-                "",
-                "g",
-                1,
-                vec!["data2_admin", "domain1", "domain2"],
-            ));
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
+                .is_ok());
+            assert!(adapter
+                .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
+                .is_ok());
         }
     }
 }
