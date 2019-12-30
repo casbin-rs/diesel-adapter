@@ -1,63 +1,27 @@
-use casbin::{Adapter, Model};
+use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
-    connection::Connection,
-    r2d2::{ConnectionManager, Pool, PoolError},
+    pg::PgConnection,
+    r2d2::{ConnectionManager, Pool},
     result::Error as DieselError,
     sql_query, BoolExpressionMethods, ExpressionMethods, PgExpressionMethods, QueryDsl,
     RunQueryDsl,
 };
 
-use crate::models::*;
-use std::fmt;
+use crate::{error::*, models::*, schema};
 
-pub struct DieselAdapter<T>
-where
-    T: Connection + 'static,
-    <T as diesel::Connection>::Backend: diesel::backend::UsesAnsiSavepointSyntax
-{
-    pool: Pool<ConnectionManager<T>>,
+#[cfg(feature = "postgres")]
+pub struct DieselAdapter {
+    pool: Pool<ConnectionManager<PgConnection>>,
 }
 
-#[derive(Debug)]
-pub enum Error {
-    R2d2PoolError(PoolError),
-    DieselError(DieselError),
-}
-
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Error::*;
-
-        match self {
-            R2d2PoolError(pool_err) => writeln!(f, "R2d2 pool error {}", pool_err),
-            DieselError(diesel_error) => writeln!(f, "Diesel error {}", diesel_error),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
-
-impl<'a, T> DieselAdapter<T>
-where
-    T: Connection + 'static,
-    <T as diesel::Connection>::Backend: diesel::backend::UsesAnsiSavepointSyntax,
-{
-    pub fn new(conn_opts: ConnOptions) -> std::result::Result<Self, Error> {
+impl<'a> DieselAdapter {
+    pub fn new(conn_opts: ConnOptions) -> Result<Self> {
         let manager = ConnectionManager::new(conn_opts.get_url());
-
-        let pool = Pool::builder()
-            .build(manager)
-            .map_err(Error::R2d2PoolError)?;
+        let pool = Pool::builder().build(manager).map_err(Error::PoolError)?;
 
         pool.get()
-            .map_err(Error::R2d2PoolError)
+            .map_err(|err| Box::new(Error::PoolError(err)))
             .and_then(|conn| {
                 sql_query(format!(
                     r#"
@@ -75,12 +39,12 @@ where
                     conn_opts.get_table()
                 ))
                 .execute(&conn)
-                .map_err(Error::DieselError)
+                .map_err(|err| Box::new(Error::DieselError(err)))
             })
             .map(|_x| Self { pool })
     }
 
-    pub fn save_policy_line(&self, ptype: &'a str, rule: Vec<&'a str>) -> NewCasbinRule<'a> {
+    pub(crate) fn save_policy_line(&self, ptype: &'a str, rule: Vec<&'a str>) -> NewCasbinRule<'a> {
         let mut new_rule = NewCasbinRule {
             ptype: Some(ptype),
             v0: None,
@@ -118,7 +82,7 @@ where
         new_rule
     }
 
-    pub fn load_policy_line(&self, casbin_rule: &CasbinRule) -> Option<Vec<String>> {
+    pub(crate) fn load_policy_line(&self, casbin_rule: &CasbinRule) -> Option<Vec<String>> {
         if let Some(ref sec) = casbin_rule.ptype {
             if sec.chars().nth(0).is_some() {
                 return Some(
@@ -131,8 +95,7 @@ where
                         &casbin_rule.v5,
                     ]
                     .iter()
-                    .filter_map(|x| x.as_ref())
-                    .map(|x| x.to_string())
+                    .filter_map(|&x| x.as_ref().map(|x| x.to_owned()))
                     .collect::<Vec<String>>(),
                 );
             }
@@ -142,250 +105,258 @@ where
     }
 }
 
-// impl Adapter for DieselAdapter {
-//     fn load_policy(&self, m: &mut Model) -> Result<()> {
-//         use schema::casbin_rules::dsl::casbin_rules;
+impl Adapter for DieselAdapter {
+    fn load_policy(&self, m: &mut Model) -> Result<()> {
+        use schema::casbin_rules::dsl::casbin_rules;
 
-//         self.pool
-//             .get()
-//             .map_err(Error::R2d2PoolError)
-//             .and_then(|conn| {
-//                 casbin_rules
-//                     .load::<CasbinRule>(&conn)
-//                     .map_err(Error::DieselError)
-//             })
-//             .and_then(move |rules| {
-//                 for casbin_rule in rules.into_iter() {
-//                     let rule = self.load_policy_line(&casbin_rule);
+        self.pool
+            .get()
+            .map_err(|err| Box::new(Error::PoolError(err)))
+            .and_then(|conn| {
+                casbin_rules
+                    .load::<CasbinRule>(&conn)
+                    .map_err(|err| Box::new(Error::DieselError(err)))
+            })
+            .and_then(move |rules: Vec<CasbinRule>| {
+                for casbin_rule in &rules {
+                    let rule = self.load_policy_line(casbin_rule);
 
-//                     if let Some(ref ptype) = casbin_rule.ptype {
-//                         let sec = ptype;
-//                         if let Some(t1) = m.model.get_mut(sec) {
-//                             if let Some(t2) = t1.get_mut(ptype) {
-//                                 if let Some(rule) = rule {
-//                                     t2.policy.push(rule);
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
+                    if let Some(ref ptype) = casbin_rule.ptype {
+                        let sec = ptype;
+                        if let Some(t1) = m.model.get_mut(sec) {
+                            if let Some(t2) = t1.get_mut(ptype) {
+                                if let Some(rule) = rule {
+                                    t2.policy.push(rule);
+                                }
+                            }
+                        }
+                    }
+                }
 
-//                 Ok(())
-//             })
-//     }
+                Ok(())
+            })
+            .map(|_| ())
+    }
 
-//     fn save_policy(&self, m: &mut Model) -> Result<()> {
-//         use schema::casbin_rules::dsl::casbin_rules;
+    fn save_policy(&self, m: &mut Model) -> Result<()> {
+        use schema::casbin_rules::dsl::casbin_rules;
 
-//         let _ = self
-//             .pool
-//             .get()
-//             .map_err(Error::R2d2PoolError)
-//             .and_then(|conn| {
-//                 diesel::delete(casbin_rules)
-//                     .execute(&conn)
-//                     .map(move |_| conn)
-//                     .map_err(Error::DieselError)
-//             })
-//             .and_then(|conn| {
-//                 if let Some(ast_map) = m.model.get("p") {
-//                     for (ref ptype, ref ast) in ast_map {
-//                         ast.policy.iter().for_each(|rule| {
-//                             let new_rule = self.save_policy_line(
-//                                 ptype.as_str(),
-//                                 rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
-//                             );
+        self.pool
+            .get()
+            .map_err(|err| Box::new(Error::PoolError(err)))
+            .and_then(|conn| {
+                diesel::delete(casbin_rules)
+                    .execute(&conn)
+                    .map(move |_| conn)
+                    .map_err(|err| Box::new(Error::DieselError(err)))
+            })
+            .and_then(|conn| {
+                // Todo: correctly return errors
+                if let Some(ast_map) = m.model.get("p") {
+                    for (ptype, ast) in ast_map {
+                        ast.policy.iter().for_each(|rule| {
+                            let new_rule = self.save_policy_line(
+                                ptype,
+                                rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
+                            );
 
-//                             let _ = diesel::insert_into(casbin_rules)
-//                                 .values(&new_rule)
-//                                 .execute(&conn)
-//                                 .map_err(DieselError::Error);
-//                         });
-//                     }
-//                 }
+                            diesel::insert_into(casbin_rules)
+                                .values(&new_rule)
+                                .execute(&conn)
+                                .map_err(|err| Box::new(Error::DieselError(err)));
+                        });
+                    }
+                }
 
-//                 if let Some(ast_map) = m.model.get("g") {
-//                     for (ref ptype, ref ast) in ast_map {
-//                         ast.policy.iter().for_each(|rule| {
-//                             let new_rule = self.save_policy_line(
-//                                 ptype.as_str(),
-//                                 rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
-//                             );
+                if let Some(ast_map) = m.model.get("g") {
+                    for (ptype, ast) in ast_map {
+                        ast.policy.iter().for_each(|rule| {
+                            let new_rule = self.save_policy_line(
+                                ptype,
+                                rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
+                            );
 
-//                             let _ = diesel::insert_into(casbin_rules)
-//                                 .values(&new_rule)
-//                                 .execute(&conn)
-//                                 .map_err(DieselError::Error);
-//                         });
-//                     }
-//                 }
+                            diesel::insert_into(casbin_rules)
+                                .values(&new_rule)
+                                .execute(&conn)
+                                .map_err(|err| Box::new(Error::DieselError(err)));
+                        });
+                    }
+                }
 
-//                 Ok(())
-//             });
-//     }
+                Ok(())
+            })
+            .map(|_| ())
+    }
 
-//     fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> bool {
-//         use schema::casbin_rules::dsl::casbin_rules;
+    fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
+        use schema::casbin_rules::dsl::casbin_rules;
 
-//         self.pool
-//             .get()
-//             .map_err(DieselError::PoolError)
-//             .and_then(move |conn| {
-//                 let new_rule = self.save_policy_line(ptype, rule);
+        self.pool
+            .get()
+            .map_err(|err| Box::new(Error::PoolError(err)))
+            .and_then(move |conn| {
+                let new_rule = self.save_policy_line(ptype, rule);
 
-//                 diesel::insert_into(casbin_rules)
-//                     .values(&new_rule)
-//                     .execute(&conn)
-//                     .map_err(Error::DieselError)
-//             })
-//             .is_ok()
-//     }
+                diesel::insert_into(casbin_rules)
+                    .values(&new_rule)
+                    .execute(&conn)
+                    .map_err(|err| Box::new(Error::DieselError(err)))
+            })
+            .map(|_| true)
+    }
 
-//     fn remove_policy(&self, _sec: &str, pt: &str, rule: Vec<&str>) -> bool {
-//         use schema::casbin_rules::dsl::*;
+    fn remove_policy(&self, _sec: &str, pt: &str, rule: Vec<&str>) -> Result<bool> {
+        use schema::casbin_rules::dsl::*;
 
-//         self.pool
-//             .get()
-//             .map_err(Error::R2d2PoolError)
-//             .and_then(move |conn| {
-//                 diesel::delete(
-//                     casbin_rules.filter(
-//                         ptype.eq(pt).and(
-//                             v0.is_not_distinct_from(rule.get(0)).and(
-//                                 v1.is_not_distinct_from(rule.get(1))
-//                                     .and(v2.is_not_distinct_from(rule.get(2)))
-//                                     .and(
-//                                         v3.is_not_distinct_from(rule.get(3))
-//                                             .and(v4.is_not_distinct_from(rule.get(4)))
-//                                             .and(v5.is_not_distinct_from(rule.get(5))),
-//                                     ),
-//                             ),
-//                         ),
-//                     ),
-//                 )
-//                 .execute(&conn)
-//                 .and_then(|n| if n == 1 { Ok(()) } else { Err(Error::NotFound) })
-//                 .map_err(Error::DieselError)
-//             })
-//             .is_ok()
-//     }
+        self.pool
+            .get()
+            .map_err(|err| Box::new(Error::PoolError(err)))
+            .and_then(move |conn| {
+                diesel::delete(
+                    casbin_rules.filter(
+                        ptype.eq(pt).and(
+                            v0.is_not_distinct_from(rule.get(0)).and(
+                                v1.is_not_distinct_from(rule.get(1))
+                                    .and(v2.is_not_distinct_from(rule.get(2)))
+                                    .and(
+                                        v3.is_not_distinct_from(rule.get(3))
+                                            .and(v4.is_not_distinct_from(rule.get(4)))
+                                            .and(v5.is_not_distinct_from(rule.get(5))),
+                                    ),
+                            ),
+                        ),
+                    ),
+                )
+                .execute(&conn)
+                .and_then(|n| {
+                    if n == 1 {
+                        Ok(())
+                    } else {
+                        Err(DieselError::NotFound)
+                    }
+                })
+                .map_err(|err| Box::new(Error::DieselError(err)))
+            })
+            .map(|_| true)
+    }
 
-//     fn remove_filtered_policy(
-//         &self,
-//         _sec: &str,
-//         pt: &str,
-//         field_index: usize,
-//         field_values: Vec<&str>,
-//     ) -> bool {
-//         use schema::casbin_rules::dsl::*;
+    fn remove_filtered_policy(
+        &self,
+        _sec: &str,
+        pt: &str,
+        field_index: usize,
+        field_values: Vec<&str>,
+    ) -> Result<bool> {
+        use schema::casbin_rules::dsl::*;
 
-//         if field_index <= 5 && !field_values.is_empty() && field_values.len() <= 6 - field_index {
-//             self.pool
-//                 .get()
-//                 .map_err(Error::R2d2PoolError)
-//                 .and_then(|conn| {
-//                     if field_index == 0 {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype.eq(pt).and(
-//                                     v0.is_not_distinct_from(field_values.get(0)).and(
-//                                         v1.is_not_distinct_from(field_values.get(1))
-//                                             .and(v2.is_not_distinct_from(field_values.get(2)))
-//                                             .and(
-//                                                 v3.is_not_distinct_from(field_values.get(3))
-//                                                     .and(
-//                                                         v4.is_not_distinct_from(
-//                                                             field_values.get(4),
-//                                                         ),
-//                                                     )
-//                                                     .and(
-//                                                         v5.is_not_distinct_from(
-//                                                             field_values.get(5),
-//                                                         ),
-//                                                     ),
-//                                             ),
-//                                     ),
-//                                 ),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     } else if field_index == 1 {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype.eq(pt).and(
-//                                     v1.is_not_distinct_from(field_values.get(0))
-//                                         .and(v2.is_not_distinct_from(field_values.get(1)))
-//                                         .and(
-//                                             v3.is_not_distinct_from(field_values.get(2))
-//                                                 .and(v4.is_not_distinct_from(field_values.get(3)))
-//                                                 .and(v5.is_not_distinct_from(field_values.get(4))),
-//                                         ),
-//                                 ),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     } else if field_index == 2 {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype.eq(pt).and(
-//                                     v2.is_not_distinct_from(field_values.get(0))
-//                                         .and(v3.is_not_distinct_from(field_values.get(1)))
-//                                         .and(v4.is_not_distinct_from(field_values.get(2))),
-//                                 ),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     } else if field_index == 3 {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype.eq(pt).and(
-//                                     v3.is_not_distinct_from(field_values.get(0))
-//                                         .and(v4.is_not_distinct_from(field_values.get(1)))
-//                                         .and(v5.is_not_distinct_from(field_values.get(2))),
-//                                 ),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     } else if field_index == 4 {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype
-//                                     .eq(pt)
-//                                     .and(v4.is_not_distinct_from(field_values.get(0)))
-//                                     .and(v5.is_not_distinct_from(field_values.get(1))),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     } else {
-//                         diesel::delete(
-//                             casbin_rules.filter(
-//                                 ptype
-//                                     .eq(pt)
-//                                     .and(v5.is_not_distinct_from(field_values.get(0))),
-//                             ),
-//                         )
-//                         .execute(&conn)
-//                         .map_err(Error::DieselError)
-//                     }
-//                 })
-//                 .and_then(|n| {
-//                     if n == 1 {
-//                         Ok(())
-//                     } else {
-//                         Err(Error::DieselError(Error::NotFound))
-//                     }
-//                 })
-//                 .is_ok()
-//         } else {
-//             false
-//         }
-//     }
-// }
+        if field_index <= 5 && !field_values.is_empty() && field_values.len() <= 6 - field_index {
+            self.pool
+                .get()
+                .map_err(|err| Box::new(Error::PoolError(err)))
+                .and_then(|conn| {
+                    if field_index == 0 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v0.is_not_distinct_from(field_values.get(0)).and(
+                                        v1.is_not_distinct_from(field_values.get(1))
+                                            .and(v2.is_not_distinct_from(field_values.get(2)))
+                                            .and(
+                                                v3.is_not_distinct_from(field_values.get(3))
+                                                    .and(
+                                                        v4.is_not_distinct_from(
+                                                            field_values.get(4),
+                                                        ),
+                                                    )
+                                                    .and(
+                                                        v5.is_not_distinct_from(
+                                                            field_values.get(5),
+                                                        ),
+                                                    ),
+                                            ),
+                                    ),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    } else if field_index == 1 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v1.is_not_distinct_from(field_values.get(0))
+                                        .and(v2.is_not_distinct_from(field_values.get(1)))
+                                        .and(
+                                            v3.is_not_distinct_from(field_values.get(2))
+                                                .and(v4.is_not_distinct_from(field_values.get(3)))
+                                                .and(v5.is_not_distinct_from(field_values.get(4))),
+                                        ),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    } else if field_index == 2 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v2.is_not_distinct_from(field_values.get(0))
+                                        .and(v3.is_not_distinct_from(field_values.get(1)))
+                                        .and(v4.is_not_distinct_from(field_values.get(2))),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    } else if field_index == 3 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v3.is_not_distinct_from(field_values.get(0))
+                                        .and(v4.is_not_distinct_from(field_values.get(1)))
+                                        .and(v5.is_not_distinct_from(field_values.get(2))),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    } else if field_index == 4 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(v4.is_not_distinct_from(field_values.get(0)))
+                                    .and(v5.is_not_distinct_from(field_values.get(1))),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    } else {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(v5.is_not_distinct_from(field_values.get(0))),
+                            ),
+                        )
+                        .execute(&conn)
+                        .map_err(|err| Box::new(Error::DieselError(err)))
+                    }
+                })
+                .and_then(|n| {
+                    if n == 1 {
+                        Ok(())
+                    } else {
+                        Err(Box::new(Error::DieselError(DieselError::NotFound)))
+                    }
+                })
+                .map(|_| true)
+        } else {
+            Ok(false)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -436,20 +407,20 @@ mod tests {
                 "",
                 "g",
                 0,
-                vec!["alice", "data2_admin", "not_exists"]
+                vec!["alice", "data2_admin", "not_exists"],
             ));
             assert!(adapter.remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"]));
 
             assert!(adapter.add_policy(
                 "",
                 "g",
-                vec!["alice", "data2_admin", "domain1", "domain2"]
+                vec!["alice", "data2_admin", "domain1", "domain2"],
             ));
             assert!(adapter.remove_filtered_policy(
                 "",
                 "g",
                 1,
-                vec!["data2_admin", "domain1", "domain2"]
+                vec!["data2_admin", "domain1", "domain2"],
             ));
         }
     }
