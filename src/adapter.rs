@@ -1,18 +1,28 @@
 use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
-    pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
     result::Error as DieselError,
-    sql_query, BoolExpressionMethods, ExpressionMethods, PgExpressionMethods, QueryDsl,
-    RunQueryDsl,
+    sql_query, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
 };
 
 use crate::{error::*, models::*, schema};
 
+use std::error::Error as StdError;
+
+#[cfg(feature = "postgres")]
+use diesel::{pg::PgConnection, PgExpressionMethods};
+
 #[cfg(feature = "postgres")]
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<PgConnection>>,
+}
+
+#[cfg(feature = "mysql")]
+use diesel::mysql::MysqlConnection;
+#[cfg(feature = "mysql")]
+pub struct DieselAdapter {
+    pool: Pool<ConnectionManager<MysqlConnection>>,
 }
 
 impl<'a> DieselAdapter {
@@ -21,7 +31,7 @@ impl<'a> DieselAdapter {
         let pool = Pool::builder().build(manager).map_err(Error::PoolError)?;
 
         pool.get()
-            .map_err(|err| Box::new(Error::PoolError(err)))
+            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
             .and_then(|conn| {
                 sql_query(format!(
                     r#"
@@ -39,7 +49,7 @@ impl<'a> DieselAdapter {
                     conn_opts.get_table()
                 ))
                 .execute(&conn)
-                .map_err(|err| Box::new(Error::DieselError(err)))
+                .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
             })
             .map(|_x| Self { pool })
     }
@@ -111,11 +121,11 @@ impl Adapter for DieselAdapter {
 
         self.pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)))
+            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
             .and_then(|conn| {
                 casbin_rules
                     .load::<CasbinRule>(&conn)
-                    .map_err(|err| Box::new(Error::DieselError(err)))
+                    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
             })
             .and_then(move |rules: Vec<CasbinRule>| {
                 for casbin_rule in &rules {
@@ -143,12 +153,12 @@ impl Adapter for DieselAdapter {
 
         self.pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)))
+            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
             .and_then(|conn| {
                 diesel::delete(casbin_rules)
                     .execute(&conn)
                     .map(move |_| conn)
-                    .map_err(|err| Box::new(Error::DieselError(err)))
+                    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
             })
             .and_then(|conn| {
                 // Todo: correctly return errors
@@ -194,14 +204,14 @@ impl Adapter for DieselAdapter {
 
         self.pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)))
+            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
             .and_then(move |conn| {
                 let new_rule = self.save_policy_line(ptype, rule);
 
                 diesel::insert_into(casbin_rules)
                     .values(&new_rule)
                     .execute(&conn)
-                    .map_err(|err| Box::new(Error::DieselError(err)))
+                    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
             })
             .map(|_| true)
     }
@@ -211,7 +221,7 @@ impl Adapter for DieselAdapter {
 
         self.pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)))
+            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
             .and_then(move |conn| {
                 diesel::delete(
                     casbin_rules.filter(
@@ -236,7 +246,7 @@ impl Adapter for DieselAdapter {
                         Err(DieselError::NotFound)
                     }
                 })
-                .map_err(|err| Box::new(Error::DieselError(err)))
+                .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
             })
             .map(|_| true)
     }
@@ -253,7 +263,7 @@ impl Adapter for DieselAdapter {
         if field_index <= 5 && !field_values.is_empty() && field_values.len() <= 6 - field_index {
             self.pool
                 .get()
-                .map_err(|err| Box::new(Error::PoolError(err)))
+                .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)
                 .and_then(|conn| {
                     if field_index == 0 {
                         diesel::delete(
@@ -280,7 +290,7 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     } else if field_index == 1 {
                         diesel::delete(
                             casbin_rules.filter(
@@ -296,7 +306,7 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     } else if field_index == 2 {
                         diesel::delete(
                             casbin_rules.filter(
@@ -308,7 +318,7 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     } else if field_index == 3 {
                         diesel::delete(
                             casbin_rules.filter(
@@ -320,7 +330,7 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     } else if field_index == 4 {
                         diesel::delete(
                             casbin_rules.filter(
@@ -331,7 +341,7 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     } else {
                         diesel::delete(
                             casbin_rules.filter(
@@ -341,14 +351,15 @@ impl Adapter for DieselAdapter {
                             ),
                         )
                         .execute(&conn)
-                        .map_err(|err| Box::new(Error::DieselError(err)))
+                        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
                     }
                 })
                 .and_then(|n| {
                     if n == 1 {
                         Ok(())
                     } else {
-                        Err(Box::new(Error::DieselError(DieselError::NotFound)))
+                        Err(Box::new(Error::DieselError(DieselError::NotFound))
+                            as Box<dyn StdError>)
                     }
                 })
                 .map(|_| true)
