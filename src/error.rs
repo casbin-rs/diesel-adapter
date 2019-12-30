@@ -1,6 +1,6 @@
 use diesel::{r2d2::PoolError, result::Error as DieselError};
 
-use std::{fmt, error::Error as StdError};
+use std::{error::Error as StdError, fmt};
 
 #[derive(Debug)]
 pub enum Error {

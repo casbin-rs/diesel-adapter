@@ -116,6 +116,11 @@ impl<'a> ConnOptions<'a> {
         self.table.to_owned()
     }
 
+    pub fn set_table(&mut self, table: &'a str) -> &mut Self {
+        self.table = table;
+        self
+    }
+
     pub fn set_pool(&mut self, pool_size: u8) -> &mut Self {
         self.pool_size = pool_size;
         self

@@ -1,6 +1,7 @@
 use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
+    dsl::sql,
     r2d2::{ConnectionManager, Pool},
     result::Error as DieselError,
     sql_query, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
@@ -23,6 +24,23 @@ use diesel::mysql::MysqlConnection;
 #[cfg(feature = "mysql")]
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<MysqlConnection>>,
+}
+
+#[cfg(feature = "mysql")]
+macro_rules! eq_null {
+    ($v:expr,$field:expr) => {{
+        || {
+            use crate::diesel::BoolExpressionMethods;
+
+            sql("")
+                .bind::<diesel::sql_types::Bool, _>($v.is_none())
+                .and($field.is_null())
+                .or(sql("")
+                    .bind::<diesel::sql_types::Bool, _>(!$v.is_none())
+                    .and($field.eq($v)))
+        }
+    }
+    ()};
 }
 
 impl<'a> DieselAdapter {
@@ -284,13 +302,13 @@ impl Adapter for DieselAdapter {
                 diesel::delete(
                     casbin_rules.filter(
                         ptype.eq(pt).and(
-                            v0.eq(rule.get(0)).and(
-                                v1.eq(rule.get(1))
-                                    .and(v2.eq(rule.get(2)))
+                            eq_null!(rule.get(0), v0).and(
+                                eq_null!(rule.get(1), v1)
+                                    .and(eq_null!(rule.get(2), v2))
                                     .and(
-                                        v3.eq(rule.get(3))
-                                            .and(v4.eq(rule.get(4)))
-                                            .and(v5.eq(rule.get(5))),
+                                        eq_null!(rule.get(3), v3)
+                                            .and(eq_null!(rule.get(4), v4))
+                                            .and(eq_null!(rule.get(5), v5)),
                                     ),
                             ),
                         ),
@@ -323,176 +341,175 @@ impl Adapter for DieselAdapter {
                 .pool
                 .get()
                 .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+
             cfg_if! {
                 if #[cfg(feature = "postgres")] {
-                (if field_index == 0 {
-
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v0.is_not_distinct_from(field_values.get(0)).and(
-                                    v1.is_not_distinct_from(field_values.get(1))
-                                        .and(v2.is_not_distinct_from(field_values.get(2)))
+                    (if field_index == 0 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v0.is_not_distinct_from(field_values.get(0)).and(
+                                        v1.is_not_distinct_from(field_values.get(1))
+                                            .and(v2.is_not_distinct_from(field_values.get(2)))
+                                            .and(
+                                                v3.is_not_distinct_from(field_values.get(3))
+                                                    .and(v4.is_not_distinct_from(field_values.get(4)))
+                                                    .and(v5.is_not_distinct_from(field_values.get(5))),
+                                            ),
+                                    ),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 1 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v1.is_not_distinct_from(field_values.get(0))
+                                        .and(v2.is_not_distinct_from(field_values.get(1)))
                                         .and(
-                                            v3.is_not_distinct_from(field_values.get(3))
-                                                .and(v4.is_not_distinct_from(field_values.get(4)))
-                                                .and(v5.is_not_distinct_from(field_values.get(5))),
+                                            v3.is_not_distinct_from(field_values.get(2))
+                                                .and(v4.is_not_distinct_from(field_values.get(3)))
+                                                .and(v5.is_not_distinct_from(field_values.get(4))),
                                         ),
                                 ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 1 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v1.is_not_distinct_from(field_values.get(0))
-                                    .and(v2.is_not_distinct_from(field_values.get(1)))
-                                    .and(
-                                        v3.is_not_distinct_from(field_values.get(2))
-                                            .and(v4.is_not_distinct_from(field_values.get(3)))
-                                            .and(v5.is_not_distinct_from(field_values.get(4))),
-                                    ),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 2 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v2.is_not_distinct_from(field_values.get(0))
+                                        .and(v3.is_not_distinct_from(field_values.get(1)))
+                                        .and(v4.is_not_distinct_from(field_values.get(2))),
+                                ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 2 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v2.is_not_distinct_from(field_values.get(0))
-                                    .and(v3.is_not_distinct_from(field_values.get(1)))
-                                    .and(v4.is_not_distinct_from(field_values.get(2))),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 3 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    v3.is_not_distinct_from(field_values.get(0))
+                                        .and(v4.is_not_distinct_from(field_values.get(1)))
+                                        .and(v5.is_not_distinct_from(field_values.get(2))),
+                                ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 3 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v3.is_not_distinct_from(field_values.get(0))
-                                    .and(v4.is_not_distinct_from(field_values.get(1)))
-                                    .and(v5.is_not_distinct_from(field_values.get(2))),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 4 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(v4.is_not_distinct_from(field_values.get(0)))
+                                    .and(v5.is_not_distinct_from(field_values.get(1))),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 4 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype
-                                .eq(pt)
-                                .and(v4.is_not_distinct_from(field_values.get(0)))
-                                .and(v5.is_not_distinct_from(field_values.get(1))),
-                        ),
-                    )
-                    .execute(&conn)
-                } else {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype
-                                .eq(pt)
-                                .and(v5.is_not_distinct_from(field_values.get(0))),
-                        ),
-                    )
-                    .execute(&conn)
-                })
-                .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
-                .and_then(|n| {
-                    if n == 1 {
-                        Ok(true)
+                        )
+                        .execute(&conn)
                     } else {
-                        Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
-                    }
-                })
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(v5.is_not_distinct_from(field_values.get(0))),
+                            ),
+                        )
+                        .execute(&conn)
+                    })
+                    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+                    .and_then(|n| {
+                        if n == 1 {
+                            Ok(true)
+                        } else {
+                            Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
+                        }
+                    })
                 } else if #[cfg(feature = "mysql")] {
+                    (if field_index == 0 {
 
-                (if field_index == 0 {
-
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v0.eq(field_values.get(0)).and(
-                                    v1.eq(field_values.get(1))
-                                        .and(v2.eq(field_values.get(2)))
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    eq_null!(field_values.get(0), v0).and(
+                                        eq_null!(field_values.get(1), v1)
+                                            .and(eq_null!(field_values.get(2), v2))
+                                            .and(
+                                                eq_null!(field_values.get(3), v3)
+                                                    .and(eq_null!(field_values.get(4), v4))
+                                                    .and(eq_null!(field_values.get(5), v5)),
+                                            ),
+                                    ),
+                                ),
+                            ),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 1 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    eq_null!(field_values.get(0), v1)
+                                        .and(eq_null!(field_values.get(1), v2))
                                         .and(
-                                            v3.eq(field_values.get(3))
-                                                .and(v4.eq(field_values.get(4)))
-                                                .and(v5.eq(field_values.get(5))),
+                                            eq_null!(field_values.get(2), v3)
+                                                .and(eq_null!(field_values.get(3), v4))
+                                                .and(eq_null!(field_values.get(4), v5)),
                                         ),
                                 ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 1 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v1.eq(field_values.get(0))
-                                    .and(v2.eq(field_values.get(1)))
-                                    .and(
-                                        v3.eq(field_values.get(2))
-                                            .and(v4.eq(field_values.get(3)))
-                                            .and(v5.eq(field_values.get(4))),
-                                    ),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 2 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    eq_null!(field_values.get(0), v2)
+                                        .and(eq_null!(field_values.get(1), v3))
+                                        .and(eq_null!(field_values.get(2), v4)),
+                                ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 2 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v2.eq(field_values.get(0))
-                                    .and(v3.eq(field_values.get(1)))
-                                    .and(v4.eq(field_values.get(2))),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 3 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype.eq(pt).and(
+                                    eq_null!(field_values.get(0), v3)
+                                        .and(eq_null!(field_values.get(1), v4))
+                                        .and(eq_null!(field_values.get(2), v5)),
+                                ),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 3 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype.eq(pt).and(
-                                v3.eq(field_values.get(0))
-                                    .and(v4.eq(field_values.get(1)))
-                                    .and(v5.eq(field_values.get(2))),
+                        )
+                        .execute(&conn)
+                    } else if field_index == 4 {
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(eq_null!(field_values.get(0), v4))
+                                    .and(eq_null!(field_values.get(1), v5)),
                             ),
-                        ),
-                    )
-                    .execute(&conn)
-                } else if field_index == 4 {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype
-                                .eq(pt)
-                                .and(v4.eq(field_values.get(0)))
-                                .and(v5.eq(field_values.get(1))),
-                        ),
-                    )
-                    .execute(&conn)
-                } else {
-                    diesel::delete(
-                        casbin_rules.filter(
-                            ptype
-                                .eq(pt)
-                                .and(v5.eq(field_values.get(0))),
-                        ),
-                    )
-                    .execute(&conn)
-                })
-                .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
-                .and_then(|n| {
-                    if n == 1 {
-                        Ok(true)
+                        )
+                        .execute(&conn)
                     } else {
-                        Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
-                    }
-                })
+                        diesel::delete(
+                            casbin_rules.filter(
+                                ptype
+                                    .eq(pt)
+                                    .and(eq_null!(field_values.get(0), v5)),
+                            ),
+                        )
+                        .execute(&conn)
+                    })
+                    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+                    .and_then(|n| {
+                        if n == 1 {
+                            Ok(true)
+                        } else {
+                            Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
+                        }
+                    })
                 }
             }
         } else {
@@ -507,6 +524,23 @@ mod tests {
 
     #[test]
     fn test_adapter() {
+        // # Ubuntu
+        // sudo apt install libpq-dev libmysqlclient-dev
+        //
+        // # Deepin
+        // sudo apt install libpq-dev libmysql++-dev
+        //
+        // docker run -itd  --restart always  -e POSTGRES_USER=casbin_rs  -e POSTGRES_PASSWORD=casbin_rs  -e POSTGRES_DB=casbin  -p 5432:5432  -v /srv/docker/postgresql:/var/lib/postgresql  postgres:11;
+        // docker run -itd  --restart always -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_USER=casbin_rs -e MYSQL_PASSWORD=casbin_rs -e MYSQL_DATABASE=casbin -p 3306:3306 -v /srv/docker/mysql:/var/lib/mysql mysql:8 --default-authentication-plugin=mysql_native_password;
+        //
+        //  # Ubuntu
+        //  sudo apt install postgresql-client-11 mysql-client-core-8.0
+        //
+        //  # Deepin
+        //  sudo apt install mysql-client postgresql-client-9.6
+        //
+        //  psql postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin;
+        //  mysql -h 127.0.0.1 -u casbin_rs -p
         use casbin::{Enforcer, FileAdapter, Model};
 
         let mut m = Model::new();
@@ -518,98 +552,81 @@ mod tests {
 
         let mut e = Enforcer::new(m, file_adapter);
         let adapter = DieselAdapter::new(conn_opts);
-        // println!("{:?}", adapter.err());
-        assert!(adapter.is_ok());
 
-        // sudo apt install libpq-dev libmysqlclient-dev
-        //
-        // docker run -itd \
-        //     --restart always \
-        //         -e POSTGRES_USER=casbin_rs \
-        //         -e POSTGRES_PASSWORD=casbin_rs \
-        //         -e POSTGRES_DB=casbin \
-        //         -p 5432:5432 \
-        //     -v /srv/docker/postgresql:/var/lib/postgresql \
-        //     postgres:11;
-        //
-        // docker run -itd  --restart always -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_USER=casbin_rs -e MYSQL_PASSWORD=casbin_rs -e MYSQL_DATABASE=casbin -p 3306:3306 -v /srv/docker/mysql:/var/lib/mysql mysql:8;
-        //
-        //  sudo apt install postgresql-client-11 mysql-client-core-8.0
-        //
-        //  psql postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin;
-        //  mysql -h 127.0.0.1 -u casbin_rs -p
+        match adapter {
+            Ok(mut adapter) => {
+                assert!(adapter.save_policy(&mut e.model).is_ok());
 
-        if let Ok(mut adapter) = adapter {
-            assert!(adapter.save_policy(&mut e.model).is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["alice", "data1", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["bob", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "g", vec!["alice", "data2_admin"])
+                    .is_ok());
 
-            assert!(adapter
-                .remove_policy("", "p", vec!["alice", "data1", "read"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["bob", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "g", vec!["alice", "data2_admin"])
-                .is_ok());
+                assert!(adapter
+                    .add_policy("", "p", vec!["alice", "data1", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .add_policy("", "p", vec!["bob", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .add_policy("", "p", vec!["data2_admin", "data2", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .add_policy("", "p", vec!["data2_admin", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .add_policy("", "g", vec!["alice", "data2_admin"])
+                    .is_ok());
 
-            assert!(adapter
-                .add_policy("", "p", vec!["alice", "data1", "read"])
-                .is_ok());
-            assert!(adapter
-                .add_policy("", "p", vec!["bob", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .add_policy("", "p", vec!["data2_admin", "data2", "read"])
-                .is_ok());
-            assert!(adapter
-                .add_policy("", "p", vec!["data2_admin", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .add_policy("", "g", vec!["alice", "data2_admin"])
-                .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["alice", "data1", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["bob", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                    .is_ok());
+                assert!(adapter
+                    .remove_policy("", "g", vec!["alice", "data2_admin"])
+                    .is_ok());
 
-            assert!(adapter
-                .remove_policy("", "p", vec!["alice", "data1", "read"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["bob", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
-                .is_ok());
-            assert!(adapter
-                .remove_policy("", "g", vec!["alice", "data2_admin"])
-                .is_ok());
+                assert!(!adapter
+                    .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
+                    .is_ok());
 
-            assert!(!adapter
-                .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
-                .is_ok());
+                assert!(adapter
+                    .add_policy("", "g", vec!["alice", "data2_admin"])
+                    .is_ok());
+                assert!(!adapter
+                    .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
+                    .is_ok());
+                assert!(adapter
+                    .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
+                    .is_ok());
 
-            assert!(adapter
-                .add_policy("", "g", vec!["alice", "data2_admin"])
-                .is_ok());
-            assert!(!adapter
-                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
-                .is_ok());
-            assert!(adapter
-                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
-                .is_ok());
-
-            assert!(adapter
-                .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
-                .is_ok());
-            assert!(adapter
-                .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
-                .is_ok());
+                assert!(adapter
+                    .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
+                    .is_ok());
+                assert!(adapter
+                    .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
+                    .is_ok());
+            }
+            Err(err) => println!("{:?}", err),
         }
     }
 }

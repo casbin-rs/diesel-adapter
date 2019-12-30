@@ -1,5 +1,3 @@
-env:
-  CODECOV_TOKEN = 56f042dc-16bc-4c1e-b3a2-19d2ded28186
 language: rust
 sudo: required
 dist: trusty
@@ -28,10 +26,3 @@ script:
 - cargo test
 - cargo clippy -- -D warnings
 - cargo fmt --all -- --check
-
-after_success: |
-  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
-    # upload report to codecov
-    docker run --security-opt seccomp=unconfined -v "$PWD:/volume" xd009642/tarpaulin sh -c "cargo tarpaulin --out Xml"
-    bash <(curl -s https://codecov.io/bash)
-  fi
