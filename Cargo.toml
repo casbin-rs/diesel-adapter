@@ -12,7 +12,7 @@ diesel = { version = "1.4.3", features = ["r2d2"] }
 cfg-if = "0.1"
 
 [features]
-default = ["postgres"]
+default = ["mysql"]
 
 postgres = ["diesel/postgres"]
 mysql = ["diesel/mysql"]

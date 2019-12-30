@@ -40,7 +40,7 @@ impl<'a> Default for ConnOptions<'a> {
         cfg_if! {
             if #[cfg(feature = "postgres")] {
                 ConnOptions {
-                    hostname: "localhost",
+                    hostname: "127.0.0.1",
                     port: 5432,
                     username: None,
                     password: None,
@@ -50,7 +50,7 @@ impl<'a> Default for ConnOptions<'a> {
                 }
             } else if #[cfg(feature = "mysql")] {
                 ConnOptions {
-                    hostname: "localhost",
+                    hostname: "127.0.0.1",
                     port: 3306,
                     username: None,
                     password: None,
@@ -136,7 +136,7 @@ mod tests {
         conn_options.set_auth("test", "test");
 
         assert_eq!(
-            "postgres://test:test@localhost:5432/casbin",
+            "postgres://test:test@127.0.0.1:5432/casbin",
             conn_options.get_url()
         )
     }
@@ -146,6 +146,6 @@ mod tests {
     fn test_url() {
         use super::*;
         let conn_options = ConnOptions::default();
-        assert_eq!("mysql://localhost:3306/casbin", conn_options.get_url())
+        assert_eq!("mysql://127.0.0.1:3306/casbin", conn_options.get_url())
     }
 }
