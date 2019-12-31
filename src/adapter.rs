@@ -1,7 +1,6 @@
 use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
-    dsl::sql,
     r2d2::{ConnectionManager, Pool},
     result::Error as DieselError,
     sql_query, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
@@ -20,12 +19,11 @@ pub struct DieselAdapter {
 }
 
 #[cfg(feature = "mysql")]
-use diesel::mysql::MysqlConnection;
+use diesel::{dsl::sql, mysql::MysqlConnection};
 #[cfg(feature = "mysql")]
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<MysqlConnection>>,
 }
-
 #[cfg(feature = "mysql")]
 macro_rules! eq_null {
     ($v:expr,$field:expr) => {{
