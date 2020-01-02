@@ -1,0 +1,28 @@
+language: rust
+sudo: required
+dist: trusty
+addons:
+    apt:
+        packages:
+            - libssl-dev
+services:
+    - postgresql
+cache: cargo
+rust:
+  - stable
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+before_script:
+- rustup component add rustfmt
+- rustup component add clippy
+- psql -c "CREATE DATABASE casbin;" -U postgres
+- psql -c "CREATE USER casbin_rs WITH PASSWORD 'casbin_rs';" -U postgres
+
+script:
+- cargo clean
+- cargo build
+- cargo test
+- cargo clippy -- -D warnings
+- cargo fmt --all -- --check
