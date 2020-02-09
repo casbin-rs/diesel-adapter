@@ -180,11 +180,12 @@ impl Adapter for DieselAdapter {
             let rule = self.load_policy_line(casbin_rule);
 
             if let Some(ref ptype) = casbin_rule.ptype {
-                let sec = ptype;
-                if let Some(t1) = m.get_mut_model().get_mut(sec) {
-                    if let Some(t2) = t1.get_mut(ptype) {
-                        if let Some(rule) = rule {
-                            t2.get_mut_policy().insert(rule);
+                if let Some(ref sec) = ptype.chars().next().map(|x| x.to_string()) {
+                    if let Some(t1) = m.get_mut_model().get_mut(sec) {
+                        if let Some(t2) = t1.get_mut(ptype) {
+                            if let Some(rule) = rule {
+                                t2.get_mut_policy().insert(rule);
+                            }
                         }
                     }
                 }
