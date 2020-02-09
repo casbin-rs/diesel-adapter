@@ -1,18 +1,26 @@
 [package]
 name = "diesel-adapter"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 edition = "2018"
+license = "Apache-2.0"
+description = "Diesel adapter for casbin-rs"
+homepage="https://github.com/casbin-rs/diesel-adapter"
+readme="README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-casbin = { version = "0.1.1" }
+casbin = { version = "0.2.0" }
 diesel = { version = "1.4.3", features = ["r2d2"] }
 cfg-if = "0.1"
+async-trait = "0.1.24"
 
 [features]
 default = ["postgres"]
 
 postgres = ["diesel/postgres"]
 mysql = ["diesel/mysql"]
+
+[dev-dependencies]
+async-std = "1.5.0"
