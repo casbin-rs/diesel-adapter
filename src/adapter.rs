@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
@@ -161,8 +162,9 @@ impl<'a> DieselAdapter {
     }
 }
 
+#[async_trait]
 impl Adapter for DieselAdapter {
-    fn load_policy(&self, m: &mut Model) -> Result<()> {
+    async fn load_policy(&self, m: &mut Model) -> Result<()> {
         use schema::casbin_rules::dsl::casbin_rules;
 
         let conn = self
@@ -179,10 +181,10 @@ impl Adapter for DieselAdapter {
 
             if let Some(ref ptype) = casbin_rule.ptype {
                 let sec = ptype;
-                if let Some(t1) = m.model.get_mut(sec) {
+                if let Some(t1) = m.get_mut_model().get_mut(sec) {
                     if let Some(t2) = t1.get_mut(ptype) {
                         if let Some(rule) = rule {
-                            t2.policy.push(rule);
+                            t2.get_mut_policy().insert(rule);
                         }
                     }
                 }
@@ -192,7 +194,7 @@ impl Adapter for DieselAdapter {
         Ok(())
     }
 
-    fn save_policy(&self, m: &mut Model) -> Result<()> {
+    async fn save_policy(&self, m: &mut Model) -> Result<()> {
         use schema::casbin_rules::dsl::casbin_rules;
 
         let conn = self
@@ -204,9 +206,9 @@ impl Adapter for DieselAdapter {
             .execute(&conn)
             .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)?;
 
-        if let Some(ast_map) = m.model.get("p") {
+        if let Some(ast_map) = m.get_mut_model().get("p") {
             for (ptype, ast) in ast_map {
-                for rule in &ast.policy {
+                for rule in ast.get_policy() {
                     let new_rule = self.save_policy_line(
                         ptype,
                         rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
@@ -223,9 +225,9 @@ impl Adapter for DieselAdapter {
             }
         }
 
-        if let Some(ast_map) = m.model.get("g") {
+        if let Some(ast_map) = m.get_mut_model().get("g") {
             for (ptype, ast) in ast_map {
-                for rule in &ast.policy {
+                for rule in ast.get_policy() {
                     let new_rule = self.save_policy_line(
                         ptype,
                         rule.iter().map(|x| x.as_str()).collect::<Vec<&str>>(),
@@ -245,7 +247,7 @@ impl Adapter for DieselAdapter {
         Ok(())
     }
 
-    fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
+    async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
         use schema::casbin_rules::dsl::casbin_rules;
 
         let conn = self
@@ -262,7 +264,7 @@ impl Adapter for DieselAdapter {
             .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
     }
 
-    fn remove_policy(&self, _sec: &str, pt: &str, rule: Vec<&str>) -> Result<bool> {
+    async fn remove_policy(&self, _sec: &str, pt: &str, rule: Vec<&str>) -> Result<bool> {
         use schema::casbin_rules::dsl::*;
 
         let conn = self
@@ -325,7 +327,7 @@ impl Adapter for DieselAdapter {
         }
     }
 
-    fn remove_filtered_policy(
+    async fn remove_filtered_policy(
         &self,
         _sec: &str,
         pt: &str,
@@ -539,92 +541,110 @@ mod tests {
         //
         //  psql postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin;
         //  mysql -h 127.0.0.1 -u casbin_rs -p
+        use async_std::task;
         use casbin::{Enforcer, FileAdapter, Model};
-
-        let mut m = Model::new();
-        m.load_model("examples/rbac_model.conf");
 
         let mut conn_opts = ConnOptions::default();
         conn_opts.set_auth("casbin_rs", "casbin_rs");
-        let file_adapter = FileAdapter::new("examples/rbac_policy.csv");
+        let file_adapter = Box::new(FileAdapter::new("examples/rbac_policy.csv"));
 
-        let mut e = Enforcer::new(m, file_adapter);
-        let adapter = DieselAdapter::new(conn_opts);
+        task::block_on(async move {
+            let m = Model::from_file("examples/rbac_model.conf").await.unwrap();
 
-        match adapter {
-            Ok(mut adapter) => {
-                assert!(adapter.save_policy(&mut e.model).is_ok());
+            let mut e = Enforcer::new(m, file_adapter).await.unwrap();
+            let mut adapter = DieselAdapter::new(conn_opts).unwrap();
 
-                assert!(adapter
-                    .remove_policy("", "p", vec!["alice", "data1", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["bob", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "g", vec!["alice", "data2_admin"])
-                    .is_ok());
+            assert!(adapter.save_policy(&mut e.get_mut_model()).await.is_ok());
 
-                assert!(adapter
-                    .add_policy("", "p", vec!["alice", "data1", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .add_policy("", "p", vec!["bob", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .add_policy("", "p", vec!["data2_admin", "data2", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .add_policy("", "p", vec!["data2_admin", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .add_policy("", "g", vec!["alice", "data2_admin"])
-                    .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["alice", "data1", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["bob", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin"])
+                .await
+                .is_ok());
 
-                assert!(adapter
-                    .remove_policy("", "p", vec!["alice", "data1", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["bob", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
-                    .is_ok());
-                assert!(adapter
-                    .remove_policy("", "g", vec!["alice", "data2_admin"])
-                    .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["alice", "data1", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["bob", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin"])
+                .await
+                .is_ok());
 
-                assert!(!adapter
-                    .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
-                    .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["alice", "data1", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["bob", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin"])
+                .await
+                .is_ok());
 
-                assert!(adapter
-                    .add_policy("", "g", vec!["alice", "data2_admin"])
-                    .is_ok());
-                assert!(!adapter
-                    .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
-                    .is_ok());
-                assert!(adapter
-                    .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
-                    .is_ok());
+            assert!(!adapter
+                .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
+                .await
+                .is_ok());
 
-                assert!(adapter
-                    .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
-                    .is_ok());
-                assert!(adapter
-                    .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
-                    .is_ok());
-            }
-            Err(err) => println!("{:?}", err),
-        }
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin"])
+                .await
+                .is_ok());
+            assert!(!adapter
+                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
+                .await
+                .is_ok());
+
+            assert!(adapter
+                .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
+                .await
+                .is_ok());
+            assert!(adapter
+                .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
+                .await
+                .is_ok());
+        });
     }
 }
