@@ -146,8 +146,7 @@ mod tests {
             .set_auth("user", "pass")
             .set_port(1234)
             .set_hostname("example.com")
-            .set_database("db")
-        ;
+            .set_database("db");
 
         assert_eq!(
             "postgres://user:pass@example.com:1234/db",
