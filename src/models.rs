@@ -31,33 +31,30 @@ pub struct ConnOptions<'a> {
     username: Option<&'a str>,
     password: Option<&'a str>,
     database: &'a str,
-    table: &'a str,
     pool_size: u8,
 }
 
 impl<'a> Default for ConnOptions<'a> {
     fn default() -> Self {
-        cfg_if! {
-            if #[cfg(feature = "postgres")] {
-                ConnOptions {
-                    hostname: "127.0.0.1",
-                    port: 5432,
-                    username: None,
-                    password: None,
-                    database: "casbin",
-                    table: "casbin_rules",
-                    pool_size: 8,
-                }
-            } else if #[cfg(feature = "mysql")] {
-                ConnOptions {
-                    hostname: "127.0.0.1",
-                    port: 3306,
-                    username: None,
-                    password: None,
-                    database: "casbin",
-                    table: "casbin_rules",
-                    pool_size: 8,
-                }
+        if cfg!(feature = "mysql") {
+            ConnOptions {
+                hostname: "127.0.0.1",
+                port: 3306,
+                username: None,
+                password: None,
+                database: "casbin",
+                pool_size: 8,
+            }
+        } else {
+            // We have to have an else here and
+            // the else should be the default "feature"
+            ConnOptions {
+                hostname: "127.0.0.1",
+                port: 5432,
+                username: None,
+                password: None,
+                database: "casbin",
+                pool_size: 8,
             }
         }
     }
@@ -92,28 +89,22 @@ impl<'a> ConnOptions<'a> {
         }
     }
 
-    cfg_if! {
-        if #[cfg(feature = "postgres")] {
-            pub fn get_url(&self) -> String {
-                if let Some(auth) = self.get_auth() {
-                    format!("postgres://{}@{}/{}", auth, self.get_host(), self.database)
-                } else {
-                    format!("postgres://{}/{}", self.get_host(), self.database)
-                }
-            }
-        } else if #[cfg(feature = "mysql")] {
-            pub fn get_url(&self) -> String {
-                if let Some(auth) = self.get_auth() {
-                    format!("mysql://{}@{}/{}", auth, self.get_host(), self.database)
-                } else {
-                    format!("mysql://{}/{}", self.get_host(), self.database)
-                }
-            }
+    #[cfg(feature = "postgres")]
+    pub fn get_url(&self) -> String {
+        if let Some(auth) = self.get_auth() {
+            format!("postgres://{}@{}/{}", auth, self.get_host(), self.database)
+        } else {
+            format!("postgres://{}/{}", self.get_host(), self.database)
         }
     }
 
-    pub fn get_table(&self) -> String {
-        self.table.to_owned()
+    #[cfg(feature = "mysql")]
+    pub fn get_url(&self) -> String {
+        if let Some(auth) = self.get_auth() {
+            format!("mysql://{}@{}/{}", auth, self.get_host(), self.database)
+        } else {
+            format!("mysql://{}/{}", self.get_host(), self.database)
+        }
     }
 
     pub fn get_database(&self) -> String {
