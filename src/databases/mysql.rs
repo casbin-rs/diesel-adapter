@@ -1,13 +1,13 @@
-use casbin::Result;
+use crate::schema;
 use crate::Error;
+use casbin::Result;
 use diesel::{
     self,
-    result::Error as DieselError,
-    sql_query, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    dsl::sql,
     r2d2::{ConnectionManager, PooledConnection},
-    MysqlConnection, dsl::sql,
+    result::Error as DieselError,
+    sql_query, BoolExpressionMethods, ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl,
 };
-use crate::schema;
 
 use std::error::Error as StdError;
 
@@ -32,29 +32,28 @@ macro_rules! eq_null {
 pub type Connection = MysqlConnection;
 type Pool = PooledConnection<ConnectionManager<Connection>>;
 
-pub fn new(conn: Result<Pool>) -> Result<usize>{
-    conn
-        .and_then(|conn| {
-            sql_query(format!(
-                r#"
-                    CREATE TABLE IF NOT EXISTS {} (
-                        id INT NOT NULL AUTO_INCREMENT,
-                        ptype VARCHAR(12),
-                        v0 VARCHAR(128),
-                        v1 VARCHAR(128),
-                        v2 VARCHAR(128),
-                        v3 VARCHAR(128),
-                        v4 VARCHAR(128),
-                        v5 VARCHAR(128),
-                        PRIMARY KEY(id),
-                        CONSTRAINT unique_key UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-                "#,
-                TABLE_NAME
-            ))
-                .execute(&conn)
-                .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
-        })
+pub fn new(conn: Result<Pool>) -> Result<usize> {
+    conn.and_then(|conn| {
+        sql_query(format!(
+            r#"
+                CREATE TABLE IF NOT EXISTS {} (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    ptype VARCHAR(12),
+                    v0 VARCHAR(128),
+                    v1 VARCHAR(128),
+                    v2 VARCHAR(128),
+                    v3 VARCHAR(128),
+                    v4 VARCHAR(128),
+                    v5 VARCHAR(128),
+                    PRIMARY KEY(id),
+                    CONSTRAINT unique_key UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            "#,
+            TABLE_NAME
+        ))
+        .execute(&conn)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    })
 }
 
 pub fn remove_policy(conn: Pool, pt: &str, rule: Vec<&str>) -> Result<bool> {
@@ -75,22 +74,26 @@ pub fn remove_policy(conn: Pool, pt: &str, rule: Vec<&str>) -> Result<bool> {
             ),
         ),
     )
-        .execute(&conn)
-        .and_then(|n| {
-            if n == 1 {
-                Ok(true)
-            } else {
-                Err(DieselError::NotFound)
-            }
-        })
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .execute(&conn)
+    .and_then(|n| {
+        if n == 1 {
+            Ok(true)
+        } else {
+            Err(DieselError::NotFound)
+        }
+    })
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
-pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_values: Vec<&str>) -> Result<bool> {
+pub fn remove_filtered_policy(
+    conn: Pool,
+    pt: &str,
+    field_index: usize,
+    field_values: Vec<&str>,
+) -> Result<bool> {
     use schema::casbin_rules::dsl::*;
 
     (if field_index == 0 {
-
         diesel::delete(
             casbin_rules.filter(
                 ptype.eq(pt).and(
@@ -106,7 +109,7 @@ pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_va
                 ),
             ),
         )
-            .execute(&conn)
+        .execute(&conn)
     } else if field_index == 1 {
         diesel::delete(
             casbin_rules.filter(
@@ -121,7 +124,7 @@ pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_va
                 ),
             ),
         )
-            .execute(&conn)
+        .execute(&conn)
     } else if field_index == 2 {
         diesel::delete(
             casbin_rules.filter(
@@ -132,7 +135,7 @@ pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_va
                 ),
             ),
         )
-            .execute(&conn)
+        .execute(&conn)
     } else if field_index == 3 {
         diesel::delete(
             casbin_rules.filter(
@@ -143,7 +146,7 @@ pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_va
                 ),
             ),
         )
-            .execute(&conn)
+        .execute(&conn)
     } else if field_index == 4 {
         diesel::delete(
             casbin_rules.filter(
@@ -153,24 +156,17 @@ pub fn remove_filtered_policy(conn: Pool, pt: &str, field_index: usize, field_va
                     .and(eq_null!(field_values.get(1), v5)),
             ),
         )
-            .execute(&conn)
+        .execute(&conn)
     } else {
-        diesel::delete(
-            casbin_rules.filter(
-                ptype
-                    .eq(pt)
-                    .and(eq_null!(field_values.get(0), v5)),
-            ),
-        )
+        diesel::delete(casbin_rules.filter(ptype.eq(pt).and(eq_null!(field_values.get(0), v5))))
             .execute(&conn)
     })
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
-        .and_then(|n| {
-            if n == 1 {
-                Ok(true)
-            } else {
-                Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
-            }
-        })
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .and_then(|n| {
+        if n == 1 {
+            Ok(true)
+        } else {
+            Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
+        }
+    })
 }
-
