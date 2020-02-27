@@ -73,7 +73,7 @@ impl<'a> DieselAdapter {
 
     pub(crate) fn load_policy_line(&self, casbin_rule: &CasbinRule) -> Option<Vec<String>> {
         if let Some(ref sec) = casbin_rule.ptype {
-            if sec.chars().nth(0).is_some() {
+            if sec.chars().next().is_some() {
                 return Some(
                     vec![
                         &casbin_rule.v0,
