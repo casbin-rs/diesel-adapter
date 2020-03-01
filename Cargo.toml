@@ -8,12 +8,9 @@ description = "Diesel adapter for casbin-rs"
 homepage="https://github.com/casbin-rs/diesel-adapter"
 readme="README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 casbin = { version = "0.2.0" }
-diesel = { version = "1.4.3", features = ["r2d2"] }
-cfg-if = "0.1"
+diesel = { version = "1.4.3", features = ["r2d2", "postgres", "mysql"] }
 async-trait = "0.1.24"
 
 [features]
