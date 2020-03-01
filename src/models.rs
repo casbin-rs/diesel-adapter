@@ -116,8 +116,12 @@ impl<'a> ConnOptions<'a> {
         self.table.to_owned()
     }
 
-    pub fn set_table(&mut self, table: &'a str) -> &mut Self {
-        self.table = table;
+    pub fn get_database(&self) -> String {
+        self.database.to_owned()
+    }
+
+    pub fn set_database(&mut self, database: &'a str) -> &mut Self {
+        self.database = database;
         self
     }
 
@@ -138,10 +142,14 @@ mod tests {
     fn test_url() {
         use super::*;
         let mut conn_options = ConnOptions::default();
-        conn_options.set_auth("test", "test");
+        conn_options
+            .set_auth("user", "pass")
+            .set_port(1234)
+            .set_hostname("example.com")
+            .set_database("db");
 
         assert_eq!(
-            "postgres://test:test@127.0.0.1:5432/casbin",
+            "postgres://user:pass@example.com:1234/db",
             conn_options.get_url()
         )
     }
