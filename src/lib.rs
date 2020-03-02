@@ -3,6 +3,9 @@ extern crate diesel;
 
 mod adapter;
 mod error;
+
+#[macro_use]
+mod macros;
 mod models;
 mod schema;
 
