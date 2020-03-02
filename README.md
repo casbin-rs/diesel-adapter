@@ -12,8 +12,8 @@ An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.2.0" }
-diesel-adapter = { version = "0.2.0", features = ["postgres"] }
+casbin = { version = "0.3.0" }
+diesel-adapter = { version = "0.3.0", features = ["postgres"] }
 async-std = "1.5.0"
 ```
 
@@ -21,12 +21,12 @@ async-std = "1.5.0"
 ## Example
 
 ```rust
-use casbin::{Enforcer, FileAdapter, Model};
+use casbin::{Enforcer, FileAdapter, DefaultModel};
 use diesel_adapter::{DieselAdapter, ConnOptions};
-use async_std::task;
 
-task::block_on(async {
-    let mut m = Model::from_file("examples/rbac_model.conf").await?;
+#[async_std::main]
+async fn main() {
+    let mut m = Box::new(DefaultModel::from_file("examples/rbac_model.conf").await?);
 
     let mut conn_opts = ConnOptions::default();
     conn_opts
@@ -37,7 +37,7 @@ task::block_on(async {
 
     let a = Box::new(DieselAdapter::new(conn_opts).await?);
     let mut e = Enforcer::new(m, a).await?;
-});
+};
 ```
 
 ## Features
