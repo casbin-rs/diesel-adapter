@@ -205,7 +205,7 @@ impl Adapter for DieselAdapter {
             return diesel::insert_into(casbin_rules)
                 .values(&new_rule)
                 .execute(&conn)
-                .map(|n| if n == 1 { true } else { false })
+                .map(|n| n == 1)
                 .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>);
         }
 

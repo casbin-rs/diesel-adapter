@@ -11,7 +11,7 @@ use diesel::{
 
 use std::error::Error as StdError;
 
-use crate::adapter::TABLE_NAME;
+use crate::{adapter::TABLE_NAME, models::CasbinRule};
 
 pub type Connection = PgConnection;
 type Pool = PooledConnection<ConnectionManager<Connection>>;
@@ -81,15 +81,9 @@ pub fn remove_policies(conn: Pool, pt: &str, rules: Vec<Vec<&str>>) -> Result<bo
                 .and(v4.eq(rule[4]))
                 .and(v5.eq(rule[5]));
 
-            if let Err(_) = diesel::delete(casbin_rules.filter(filter))
-                .execute(&conn)
-                .and_then(|n| {
-                    if n == 1 {
-                        Ok(true)
-                    } else {
-                        Err(DieselError::NotFound)
-                    }
-                })
+            if diesel::delete(casbin_rules.filter(filter))
+                .get_result::<CasbinRule>(&conn)
+                .is_err()
             {
                 return Err(DieselError::RollbackTransaction);
             }
