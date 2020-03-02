@@ -9,15 +9,20 @@ homepage="https://github.com/casbin-rs/diesel-adapter"
 readme="README.md"
 
 [dependencies]
-casbin = { version = "0.2.0" }
-diesel = { version = "1.4.3", features = ["r2d2", "postgres", "mysql"] }
+casbin = { version = "0.3.0" }
+diesel = { version = "1.4.3", features = ["r2d2"] }
 async-trait = "0.1.24"
 
 [features]
-default = ["postgres"]
+default = ["postgres", "runtime-async-std"]
 
 postgres = ["diesel/postgres"]
 mysql = ["diesel/mysql"]
 
+runtime-tokio = ["casbin/runtime-tokio"]
+runtime-async-std = ["casbin/runtime-async-std"]
+
 [dev-dependencies]
-async-std = "1.5.0"
+async-std = { version = "1.5.0", features = [ "attributes" ] }
+tokio = { version = "0.2.11", features = [ "full" ] }
+

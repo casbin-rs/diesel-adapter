@@ -3,25 +3,25 @@ use super::schema::casbin_rules;
 #[derive(Queryable, Identifiable)]
 pub(crate) struct CasbinRule {
     pub id: i32,
-    pub ptype: Option<String>,
-    pub v0: Option<String>,
-    pub v1: Option<String>,
-    pub v2: Option<String>,
-    pub v3: Option<String>,
-    pub v4: Option<String>,
-    pub v5: Option<String>,
+    pub ptype: String,
+    pub v0: String,
+    pub v1: String,
+    pub v2: String,
+    pub v3: String,
+    pub v4: String,
+    pub v5: String,
 }
 
 #[derive(Insertable)]
 #[table_name = "casbin_rules"]
 pub(crate) struct NewCasbinRule<'a> {
-    pub ptype: Option<&'a str>,
-    pub v0: Option<&'a str>,
-    pub v1: Option<&'a str>,
-    pub v2: Option<&'a str>,
-    pub v3: Option<&'a str>,
-    pub v4: Option<&'a str>,
-    pub v5: Option<&'a str>,
+    pub ptype: &'a str,
+    pub v0: &'a str,
+    pub v1: &'a str,
+    pub v2: &'a str,
+    pub v3: &'a str,
+    pub v4: &'a str,
+    pub v5: &'a str,
 }
 
 #[derive(Clone, Debug)]
@@ -46,8 +46,6 @@ impl<'a> Default for ConnOptions<'a> {
                 pool_size: 8,
             }
         } else {
-            // We have to have an else here and
-            // the else should be the default "feature"
             ConnOptions {
                 hostname: "127.0.0.1",
                 port: 5432,
