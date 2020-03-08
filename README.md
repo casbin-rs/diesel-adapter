@@ -32,10 +32,10 @@ async fn main() {
     conn_opts
         .set_hostname("127.0.0.1")
         .set_port(3306)
-        .set_table("casbin_rules")
+        .set_database("casbin")
         .set_auth("casbin_rs", "casbin_rs");
 
-    let a = Box::new(DieselAdapter::new(conn_opts).await?);
+    let a = Box::new(DieselAdapter::new(conn_opts)?);
     let mut e = Enforcer::new(m, a).await?;
 };
 ```
