@@ -21,23 +21,24 @@ async-std = "1.5.0"
 ## Example
 
 ```rust
-use casbin::{Enforcer, FileAdapter, DefaultModel};
+use casbin::{Enforcer, DefaultModel, Result};
 use diesel_adapter::{DieselAdapter, ConnOptions};
 
 #[async_std::main]
-async fn main() {
+async fn main() -> Result<()> {
     let mut m = Box::new(DefaultModel::from_file("examples/rbac_model.conf").await?);
 
     let mut conn_opts = ConnOptions::default();
     conn_opts
         .set_hostname("127.0.0.1")
-        .set_port(3306)
+        .set_port(5432)
         .set_database("casbin")
         .set_auth("casbin_rs", "casbin_rs");
 
     let a = Box::new(DieselAdapter::new(conn_opts)?);
     let mut e = Enforcer::new(m, a).await?;
-};
+    Ok(())
+}
 ```
 
 ## Features
