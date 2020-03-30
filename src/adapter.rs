@@ -115,17 +115,12 @@ impl<'a> DieselAdapter {
 #[async_trait]
 impl Adapter for DieselAdapter {
     async fn load_policy(&self, m: &mut dyn Model) -> Result<()> {
-        use schema::casbin_rules::dsl::casbin_rules;
         let conn = self
             .pool
             .get()
             .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
 
-        //let rules = adapter::load_policy(conn);
-
-        let rules = casbin_rules
-            .load::<CasbinRule>(&conn)
-            .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)?;
+        let rules = adapter::load_policy(conn)?;
 
         for casbin_rule in &rules {
             let rule = self.load_policy_line(casbin_rule);
@@ -151,10 +146,6 @@ impl Adapter for DieselAdapter {
             .pool
             .get()
             .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
-
-        diesel::delete(casbin_rules)
-            .execute(&conn)
-            .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)?;
 
         let mut rules = vec![];
 
@@ -183,16 +174,9 @@ impl Adapter for DieselAdapter {
                 rules.extend(new_rules);
             }
         }
-
-        conn.transaction::<_, DieselError, _>(|| {
-            diesel::insert_into(casbin_rules)
-                .values(&rules)
-                .execute(&conn)
-                .map_err(|_| DieselError::RollbackTransaction)
-        })
-            .map(|_| ())
-            .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        adapter::save_policy(conn,rules)
     }
+
     async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
         let conn = self
             .pool
@@ -275,7 +259,6 @@ mod tests {
 
     #[cfg_attr(feature = "runtime-async-std", async_std::test)]
     #[cfg_attr(feature = "runtime-tokio", tokio::test)]
-    #[test]
     async fn test_adapter() {
         use casbin::{DefaultModel, Enforcer, FileAdapter};
 

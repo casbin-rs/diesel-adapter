@@ -186,6 +186,10 @@ pub(crate) fn save_policy (conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> 
     use schema::casbin_rules::dsl::casbin_rules;
 
     conn.transaction::<_, DieselError, _>(|| {
+        diesel::delete(casbin_rules)
+            .execute(&conn)
+            .map_err(|_| DieselError::RollbackTransaction);
+
         diesel::insert_into(casbin_rules)
             .values(&rules)
             .execute(&conn)
@@ -198,9 +202,10 @@ pub(crate) fn save_policy (conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> 
 pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
     use schema::casbin_rules::dsl::casbin_rules;
 
-    casbin_rules
+    let rules = casbin_rules
         .load::<CasbinRule>(&conn)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>);
+    rules
 }
 
 pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
