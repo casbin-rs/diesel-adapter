@@ -1,6 +1,6 @@
 [package]
 name = "diesel-adapter"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 edition = "2018"
 license = "Apache-2.0"

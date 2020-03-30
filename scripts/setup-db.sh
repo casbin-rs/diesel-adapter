@@ -6,12 +6,12 @@ command -v docker > /dev/null 2>&1 || {
     echo "Please install docker before running this script." && exit 1;
 }
 
-if [ $DIS == "Ubuntu" ]; then
+if [ $DIS == "Ubuntu" ] || [ "$DIS" == "LinuxMint" ]; then
     sudo apt install -y \
         libpq-dev \
         libmysqlclient-dev \
         postgresql-client \
-        mysql-client-core;
+        mysql-client;
 
 elif [ $DIS == "Deepin" ]; then
     sudo apt install -y \
