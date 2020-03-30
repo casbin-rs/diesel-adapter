@@ -3,11 +3,9 @@ use casbin::{Adapter, Model, Result};
 use diesel::{
     self,
     r2d2::{ConnectionManager, Pool},
-    result::Error as DieselError,
-    Connection, RunQueryDsl,
 };
 
-use crate::{error::*, models::*, schema};
+use crate::{error::*, models::*};
 
 use std::error::Error as StdError;
 
@@ -140,8 +138,6 @@ impl Adapter for DieselAdapter {
     }
 
     async fn save_policy(&mut self, m: &mut dyn Model) -> Result<()> {
-        use schema::casbin_rules::dsl::casbin_rules;
-
         let conn = self
             .pool
             .get()
