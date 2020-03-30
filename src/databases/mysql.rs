@@ -189,13 +189,11 @@ pub fn remove_filtered_policy(
         })
 }
 
-pub(crate) fn save_policy (conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
+pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
     use schema::casbin_rules::dsl::casbin_rules;
 
     conn.transaction::<_, DieselError, _>(|| {
-        if diesel::delete(casbin_rules)
-            .execute(&conn)
-            .is_err() {
+        if diesel::delete(casbin_rules).execute(&conn).is_err() {
             return Err(DieselError::RollbackTransaction);
         }
 
@@ -204,8 +202,8 @@ pub(crate) fn save_policy (conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> 
             .execute(&conn)
             .map_err(|_| DieselError::RollbackTransaction)
     })
-        .map(|_| ())
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .map(|_| ())
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
 pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
@@ -226,7 +224,7 @@ pub fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
         .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
-pub fn add_policies (conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> {
+pub fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> {
     use schema::casbin_rules::dsl::casbin_rules;
 
     conn.transaction::<_, DieselError, _>(|| {
@@ -235,8 +233,8 @@ pub fn add_policies (conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> 
             .execute(&conn)
             .map_err(|_| DieselError::RollbackTransaction)
     })
-        .map(|_| true)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .map(|_| true)
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
 fn normalize_casbin_rule(mut rule: Vec<&str>, field_index: usize) -> Vec<&str> {

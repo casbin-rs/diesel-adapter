@@ -170,7 +170,7 @@ impl Adapter for DieselAdapter {
                 rules.extend(new_rules);
             }
         }
-        adapter::save_policy(conn,rules)
+        adapter::save_policy(conn, rules)
     }
 
     async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
@@ -180,7 +180,7 @@ impl Adapter for DieselAdapter {
             .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
 
         if let Some(new_rule) = self.save_policy_line(ptype, rule) {
-            return adapter::add_policy(conn,new_rule)
+            return adapter::add_policy(conn, new_rule);
         }
 
         Ok(false)
@@ -192,7 +192,6 @@ impl Adapter for DieselAdapter {
         ptype: &str,
         rules: Vec<Vec<&str>>,
     ) -> Result<bool> {
-
         let conn = self
             .pool
             .get()
@@ -203,7 +202,7 @@ impl Adapter for DieselAdapter {
             .filter_map(|x: Vec<&str>| self.save_policy_line(ptype, x))
             .collect::<Vec<NewCasbinRule>>();
 
-        adapter::add_policies(conn,new_rules)
+        adapter::add_policies(conn, new_rules)
     }
 
     async fn remove_policy(&mut self, _sec: &str, pt: &str, rule: Vec<&str>) -> Result<bool> {
