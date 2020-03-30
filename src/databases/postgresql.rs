@@ -12,6 +12,7 @@ use diesel::{
 use std::error::Error as StdError;
 
 use crate::{adapter::TABLE_NAME, models::CasbinRule};
+use crate::models::NewCasbinRule;
 
 pub type Connection = PgConnection;
 type Pool = PooledConnection<ConnectionManager<Connection>>;
@@ -179,6 +180,50 @@ pub fn remove_filtered_policy(
                 Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
             }
         })
+}
+
+pub(crate) fn save_policy (conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    conn.transaction::<_, DieselError, _>(|| {
+        diesel::insert_into(casbin_rules)
+            .values(&rules)
+            .execute(&conn)
+            .map_err(|_| DieselError::RollbackTransaction)
+    })
+        .map(|_| ())
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    casbin_rules
+        .load::<CasbinRule>(&conn)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    diesel::insert_into(casbin_rules)
+        .values(&new_rule)
+        .execute(&conn)
+        .map(|n| n == 1)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn add_policies (conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    conn.transaction::<_, DieselError, _>(|| {
+        diesel::insert_into(casbin_rules)
+            .values(&new_rules)
+            .execute(&conn)
+            .map_err(|_| DieselError::RollbackTransaction)
+    })
+        .map(|_| true)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
 fn normalize_casbin_rule(mut rule: Vec<&str>, field_index: usize) -> Vec<&str> {
