@@ -12,6 +12,7 @@ use diesel::{
 use std::error::Error as StdError;
 
 use crate::adapter::TABLE_NAME;
+use crate::models::{CasbinRule, NewCasbinRule};
 
 pub type Connection = MysqlConnection;
 type Pool = PooledConnection<ConnectionManager<Connection>>;
@@ -186,6 +187,54 @@ pub fn remove_filtered_policy(
                 Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
             }
         })
+}
+
+pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    conn.transaction::<_, DieselError, _>(|| {
+        if diesel::delete(casbin_rules).execute(&conn).is_err() {
+            return Err(DieselError::RollbackTransaction);
+        }
+
+        diesel::insert_into(casbin_rules)
+            .values(&rules)
+            .get_results::<CasbinRule>(&conn)
+            .map_err(|_| DieselError::RollbackTransaction)
+    })
+    .map(|_result: Vec<CasbinRule>| ())
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    casbin_rules
+        .load::<CasbinRule>(&conn)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    diesel::insert_into(casbin_rules)
+        .values(&new_rule)
+        .get_result::<CasbinRule>(&conn)
+        .map(|_result: CasbinRule| true)
+        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+}
+
+pub(crate) fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> {
+    use schema::casbin_rules::dsl::casbin_rules;
+
+    conn.transaction::<_, DieselError, _>(|| {
+        diesel::insert_into(casbin_rules)
+            .values(&new_rules)
+            .get_results::<CasbinRule>(&conn)
+            .map_err(|_| DieselError::RollbackTransaction)
+    })
+    .map(|_result: Vec<CasbinRule>| true)
+    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
 fn normalize_casbin_rule(mut rule: Vec<&str>, field_index: usize) -> Vec<&str> {

@@ -19,6 +19,10 @@ elif [ $DIS == "Deepin" ]; then
         libmysql++-dev \
         mysql-client \
         postgresql-client;
+elif [ $DIS == "ArchLinux" ] || [ $DIS == "ManjaroLinux" ]; then
+    sudo pacman -S libmysqlclient \
+        postgresql-libs \
+        mysql-clients \;
 else
     echo "Unsupported system: $DIS" && exit 1;
 fi
