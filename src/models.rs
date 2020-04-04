@@ -26,6 +26,7 @@ pub(crate) struct NewCasbinRule<'a> {
 
 #[derive(Clone, Debug)]
 pub struct ConnOptions<'a> {
+    host: Option<&'a str>,
     hostname: &'a str,
     port: u16,
     username: Option<&'a str>,
@@ -38,6 +39,7 @@ impl<'a> Default for ConnOptions<'a> {
     fn default() -> Self {
         if cfg!(feature = "mysql") {
             ConnOptions {
+                host: None,
                 hostname: "127.0.0.1",
                 port: 3306,
                 username: None,
@@ -47,6 +49,7 @@ impl<'a> Default for ConnOptions<'a> {
             }
         } else {
             ConnOptions {
+                host: None,
                 hostname: "127.0.0.1",
                 port: 5432,
                 username: None,
@@ -59,6 +62,11 @@ impl<'a> Default for ConnOptions<'a> {
 }
 
 impl<'a> ConnOptions<'a> {
+    pub fn set_host(&mut self, host: &'a str) -> &mut Self {
+        self.host = Some(host);
+        self
+    }
+
     pub fn set_hostname(&mut self, hostname: &'a str) -> &mut Self {
         self.hostname = hostname;
         self
@@ -70,7 +78,11 @@ impl<'a> ConnOptions<'a> {
     }
 
     fn get_host(&self) -> String {
-        format!("{}:{}", self.hostname, self.port)
+        if let Some(host) = self.host {
+            host.to_owned()
+        } else {
+            format!("{}:{}", self.hostname, self.port)
+        }
     }
 
     pub fn set_auth(&mut self, username: &'a str, password: &'a str) -> &mut Self {

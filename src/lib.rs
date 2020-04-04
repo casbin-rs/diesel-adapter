@@ -9,7 +9,7 @@ mod macros;
 mod models;
 mod schema;
 
-mod databases;
+mod actions;
 
 pub use adapter::DieselAdapter;
 pub use error::Error;
