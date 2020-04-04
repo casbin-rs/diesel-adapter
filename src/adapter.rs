@@ -7,12 +7,9 @@ use diesel::{
 
 use crate::{error::*, models::*};
 
-use std::error::Error as StdError;
+use std::{error::Error as StdError, time::Duration};
 
-#[cfg(feature = "mysql")]
-use crate::databases::mysql as adapter;
-#[cfg(feature = "postgres")]
-use crate::databases::postgresql as adapter;
+use crate::actions as adapter;
 
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<adapter::Connection>>,
@@ -23,7 +20,10 @@ pub const TABLE_NAME: &str = "casbin_rules";
 impl<'a> DieselAdapter {
     pub fn new(conn_opts: ConnOptions) -> Result<Self> {
         let manager = ConnectionManager::new(conn_opts.get_url());
-        let pool = Pool::builder().build(manager).map_err(Error::PoolError)?;
+        let pool = Pool::builder()
+            .connection_timeout(Duration::from_secs(10))
+            .build(manager)
+            .map_err(Error::PoolError)?;
 
         let conn = pool
             .get()
@@ -35,7 +35,7 @@ impl<'a> DieselAdapter {
     pub(crate) fn save_policy_line(
         &self,
         ptype: &'a str,
-        rule: Vec<&'a str>,
+        rule: &'a Vec<String>,
     ) -> Option<NewCasbinRule<'a>> {
         if ptype.trim().is_empty() || rule.is_empty() {
             return None;
@@ -51,26 +51,26 @@ impl<'a> DieselAdapter {
             v5: "",
         };
 
-        new_rule.v0 = rule[0];
+        new_rule.v0 = &rule[0];
 
         if rule.len() > 1 {
-            new_rule.v1 = rule[1];
+            new_rule.v1 = &rule[1];
         }
 
         if rule.len() > 2 {
-            new_rule.v2 = rule[2];
+            new_rule.v2 = &rule[2];
         }
 
         if rule.len() > 3 {
-            new_rule.v3 = rule[3];
+            new_rule.v3 = &rule[3];
         }
 
         if rule.len() > 4 {
-            new_rule.v4 = rule[4];
+            new_rule.v4 = &rule[4];
         }
 
         if rule.len() > 5 {
-            new_rule.v5 = rule[5];
+            new_rule.v5 = &rule[5];
         }
 
         Some(new_rule)
@@ -147,12 +147,10 @@ impl Adapter for DieselAdapter {
 
         if let Some(ast_map) = m.get_model().get("p") {
             for (ptype, ast) in ast_map {
-                let new_rules = ast.get_policy().into_iter().filter_map(|x: &Vec<String>| {
-                    self.save_policy_line(
-                        ptype,
-                        x.iter().map(|y| y.as_str()).collect::<Vec<&str>>(),
-                    )
-                });
+                let new_rules = ast
+                    .get_policy()
+                    .into_iter()
+                    .filter_map(|x: &Vec<String>| self.save_policy_line(ptype, x));
 
                 rules.extend(new_rules);
             }
@@ -160,12 +158,10 @@ impl Adapter for DieselAdapter {
 
         if let Some(ast_map) = m.get_model().get("g") {
             for (ptype, ast) in ast_map {
-                let new_rules = ast.get_policy().into_iter().filter_map(|x: &Vec<String>| {
-                    self.save_policy_line(
-                        ptype,
-                        x.iter().map(|y| y.as_str()).collect::<Vec<&str>>(),
-                    )
-                });
+                let new_rules = ast
+                    .get_policy()
+                    .into_iter()
+                    .filter_map(|x: &Vec<String>| self.save_policy_line(ptype, x));
 
                 rules.extend(new_rules);
             }
@@ -173,13 +169,13 @@ impl Adapter for DieselAdapter {
         adapter::save_policy(conn, rules)
     }
 
-    async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<&str>) -> Result<bool> {
+    async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<String>) -> Result<bool> {
         let conn = self
             .pool
             .get()
             .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
 
-        if let Some(new_rule) = self.save_policy_line(ptype, rule) {
+        if let Some(new_rule) = self.save_policy_line(ptype, &rule) {
             return adapter::add_policy(conn, new_rule);
         }
 
@@ -190,7 +186,7 @@ impl Adapter for DieselAdapter {
         &mut self,
         _sec: &str,
         ptype: &str,
-        rules: Vec<Vec<&str>>,
+        rules: Vec<Vec<String>>,
     ) -> Result<bool> {
         let conn = self
             .pool
@@ -198,14 +194,14 @@ impl Adapter for DieselAdapter {
             .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
 
         let new_rules = rules
-            .into_iter()
-            .filter_map(|x: Vec<&str>| self.save_policy_line(ptype, x))
+            .iter()
+            .filter_map(|x: &Vec<String>| self.save_policy_line(ptype, x))
             .collect::<Vec<NewCasbinRule>>();
 
         adapter::add_policies(conn, new_rules)
     }
 
-    async fn remove_policy(&mut self, _sec: &str, pt: &str, rule: Vec<&str>) -> Result<bool> {
+    async fn remove_policy(&mut self, _sec: &str, pt: &str, rule: Vec<String>) -> Result<bool> {
         let conn = self
             .pool
             .get()
@@ -218,7 +214,7 @@ impl Adapter for DieselAdapter {
         &mut self,
         _sec: &str,
         pt: &str,
-        rules: Vec<Vec<&str>>,
+        rules: Vec<Vec<String>>,
     ) -> Result<bool> {
         let conn = self
             .pool
@@ -233,7 +229,7 @@ impl Adapter for DieselAdapter {
         _sec: &str,
         pt: &str,
         field_index: usize,
-        field_values: Vec<&str>,
+        field_values: Vec<String>,
     ) -> Result<bool> {
         if field_index <= 5 && !field_values.is_empty() && field_values.len() >= 6 - field_index {
             let conn = self
@@ -251,6 +247,10 @@ impl Adapter for DieselAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn to_owned(v: Vec<&str>) -> Vec<String> {
+        v.into_iter().map(|x| x.to_owned()).collect()
+    }
 
     #[cfg_attr(feature = "runtime-async-std", async_std::test)]
     #[cfg_attr(feature = "runtime-tokio", tokio::test)]
@@ -271,40 +271,40 @@ mod tests {
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
 
         assert!(adapter
-            .remove_policy("", "p", vec!["alice", "data1", "read"])
+            .remove_policy("", "p", to_owned(vec!["alice", "data1", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["bob", "data2", "write"])
+            .remove_policy("", "p", to_owned(vec!["bob", "data2", "write"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+            .remove_policy("", "p", to_owned(vec!["data2_admin", "data2", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+            .remove_policy("", "p", to_owned(vec!["data2_admin", "data2", "write"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "g", vec!["alice", "data2_admin"])
+            .remove_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_ok());
 
         assert!(adapter
-            .add_policy("", "p", vec!["alice", "data1", "read"])
+            .add_policy("", "p", to_owned(vec!["alice", "data1", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .add_policy("", "p", vec!["bob", "data2", "write"])
+            .add_policy("", "p", to_owned(vec!["bob", "data2", "write"]))
             .await
             .is_ok());
         assert!(adapter
-            .add_policy("", "p", vec!["data2_admin", "data2", "read"])
+            .add_policy("", "p", to_owned(vec!["data2_admin", "data2", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .add_policy("", "p", vec!["data2_admin", "data2", "write"])
+            .add_policy("", "p", to_owned(vec!["data2_admin", "data2", "write"]))
             .await
             .is_ok());
 
@@ -313,10 +313,10 @@ mod tests {
                 "",
                 "p",
                 vec![
-                    vec!["alice", "data1", "read"],
-                    vec!["bob", "data2", "write"],
-                    vec!["data2_admin", "data2", "read"],
-                    vec!["data2_admin", "data2", "write"],
+                    to_owned(vec!["alice", "data1", "read"]),
+                    to_owned(vec!["bob", "data2", "write"]),
+                    to_owned(vec!["data2_admin", "data2", "read"]),
+                    to_owned(vec!["data2_admin", "data2", "write"]),
                 ]
             )
             .await
@@ -327,71 +327,89 @@ mod tests {
                 "",
                 "p",
                 vec![
-                    vec!["alice", "data1", "read"],
-                    vec!["bob", "data2", "write"],
-                    vec!["data2_admin", "data2", "read"],
-                    vec!["data2_admin", "data2", "write"],
+                    to_owned(vec!["alice", "data1", "read"]),
+                    to_owned(vec!["bob", "data2", "write"]),
+                    to_owned(vec!["data2_admin", "data2", "read"]),
+                    to_owned(vec!["data2_admin", "data2", "write"]),
                 ]
             )
             .await
             .is_ok());
 
         assert!(adapter
-            .add_policy("", "g", vec!["alice", "data2_admin"])
+            .add_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_ok());
 
         assert!(adapter
-            .remove_policy("", "p", vec!["alice", "data1", "read"])
+            .remove_policy("", "p", to_owned(vec!["alice", "data1", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["bob", "data2", "write"])
+            .remove_policy("", "p", to_owned(vec!["bob", "data2", "write"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["data2_admin", "data2", "read"])
+            .remove_policy("", "p", to_owned(vec!["data2_admin", "data2", "read"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "p", vec!["data2_admin", "data2", "write"])
+            .remove_policy("", "p", to_owned(vec!["data2_admin", "data2", "write"]))
             .await
             .is_ok());
         assert!(adapter
-            .remove_policy("", "g", vec!["alice", "data2_admin"])
+            .remove_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_ok());
 
         assert!(!adapter
-            .remove_policy("", "g", vec!["alice", "data2_admin", "not_exists"])
+            .remove_policy(
+                "",
+                "g",
+                to_owned(vec!["alice", "data2_admin", "not_exists"])
+            )
             .await
             .is_ok());
 
         assert!(adapter
-            .add_policy("", "g", vec!["alice", "data2_admin"])
+            .add_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_ok());
         assert!(adapter
-            .add_policy("", "g", vec!["alice", "data2_admin"])
+            .add_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_err());
 
         assert!(!adapter
-            .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin", "not_exists"],)
+            .remove_filtered_policy(
+                "",
+                "g",
+                0,
+                to_owned(vec!["alice", "data2_admin", "not_exists"]),
+            )
             .await
             .unwrap());
 
         assert!(adapter
-            .remove_filtered_policy("", "g", 0, vec!["alice", "data2_admin"])
+            .remove_filtered_policy("", "g", 0, to_owned(vec!["alice", "data2_admin"]))
             .await
             .is_ok());
 
         assert!(adapter
-            .add_policy("", "g", vec!["alice", "data2_admin", "domain1", "domain2"],)
+            .add_policy(
+                "",
+                "g",
+                to_owned(vec!["alice", "data2_admin", "domain1", "domain2"]),
+            )
             .await
             .is_ok());
         assert!(adapter
-            .remove_filtered_policy("", "g", 1, vec!["data2_admin", "domain1", "domain2"],)
+            .remove_filtered_policy(
+                "",
+                "g",
+                1,
+                to_owned(vec!["data2_admin", "domain1", "domain2"]),
+            )
             .await
             .is_ok());
     }

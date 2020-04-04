@@ -12,8 +12,8 @@ An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.3.0" }
-diesel-adapter = { version = "0.3.1", features = ["postgres"] }
+casbin = { version = "0.4.0" }
+diesel-adapter = { version = "0.4.0", features = ["postgres"] }
 async-std = "1.5.0"
 ```
 
@@ -21,7 +21,7 @@ async-std = "1.5.0"
 ## Example
 
 ```rust
-use casbin::{Enforcer, DefaultModel, Result};
+use casbin::prelude::*;
 use diesel_adapter::{DieselAdapter, ConnOptions};
 
 #[async_std::main]
@@ -32,6 +32,7 @@ async fn main() -> Result<()> {
     conn_opts
         .set_hostname("127.0.0.1")
         .set_port(5432)
+        .set_host("127.0.0.1:5433") // overwrite hostname, port config
         .set_database("casbin")
         .set_auth("casbin_rs", "casbin_rs");
 
