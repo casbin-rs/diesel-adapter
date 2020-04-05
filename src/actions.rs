@@ -114,18 +114,9 @@ pub fn remove_policies(conn: Pool, pt: &str, rules: Vec<Vec<String>>) -> Result<
                 .and(v4.eq(&rule[4]))
                 .and(v5.eq(&rule[5]));
 
-            if diesel::delete(casbin_rules.filter(filter))
-                .execute(&conn)
-                .and_then(|n| {
-                    if n == 1 {
-                        Ok(true)
-                    } else {
-                        Err(DieselError::NotFound)
-                    }
-                })
-                .is_err()
-            {
-                return Err(DieselError::RollbackTransaction);
+            match diesel::delete(casbin_rules.filter(filter)).execute(&conn) {
+                Ok(n) if n == 1 => continue,
+                _ => return Err(DieselError::RollbackTransaction),
             }
         }
 
