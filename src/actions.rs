@@ -115,7 +115,14 @@ pub fn remove_policies(conn: Pool, pt: &str, rules: Vec<Vec<String>>) -> Result<
                 .and(v5.eq(&rule[5]));
 
             if diesel::delete(casbin_rules.filter(filter))
-                .get_result::<CasbinRule>(&conn)
+                .execute(&conn)
+                .and_then(|n| {
+                    if n == 1 {
+                        Ok(true)
+                    } else {
+                        Err(DieselError::NotFound)
+                    }
+                })
                 .is_err()
             {
                 return Err(DieselError::RollbackTransaction);
@@ -224,10 +231,16 @@ pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
 
         diesel::insert_into(casbin_rules)
             .values(&rules)
-            .get_results::<CasbinRule>(&conn)
+            .execute(&conn)
+            .and_then(|n| {
+                if n == rules.len() {
+                    Ok(())
+                } else {
+                    Err(DieselError::RollbackTransaction)
+                }
+            })
             .map_err(|_| DieselError::RollbackTransaction)
     })
-    .map(|_| ())
     .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
@@ -244,8 +257,8 @@ pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
 
     diesel::insert_into(casbin_rules)
         .values(&new_rule)
-        .get_result::<CasbinRule>(&conn)
-        .map(|_| true)
+        .execute(&conn)
+        .and_then(|n| if n == 1 { Ok(true) } else { Ok(false) })
         .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
@@ -255,10 +268,16 @@ pub(crate) fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<
     conn.transaction::<_, DieselError, _>(|| {
         diesel::insert_into(casbin_rules)
             .values(&new_rules)
-            .get_results::<CasbinRule>(&conn)
+            .execute(&conn)
+            .and_then(|n| {
+                if n == new_rules.len() {
+                    Ok(true)
+                } else {
+                    Err(DieselError::RollbackTransaction)
+                }
+            })
             .map_err(|_| DieselError::RollbackTransaction)
     })
-    .map(|_| true)
     .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
 }
 
