@@ -35,7 +35,7 @@ impl<'a> DieselAdapter {
     pub(crate) fn save_policy_line(
         &self,
         ptype: &'a str,
-        rule: &'a Vec<String>,
+        rule: &'a [String],
     ) -> Option<NewCasbinRule<'a>> {
         if ptype.trim().is_empty() || rule.is_empty() {
             return None;
