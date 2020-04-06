@@ -29,3 +29,15 @@ impl StdError for Error {
         }
     }
 }
+
+impl From<PoolError> for Error {
+    fn from(err: PoolError) -> Self {
+        Error::PoolError(err)
+    }
+}
+
+impl From<DieselError> for Error {
+    fn from(err: DieselError) -> Self {
+        Error::DieselError(err)
+    }
+}
