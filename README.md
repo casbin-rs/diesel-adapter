@@ -12,8 +12,8 @@ An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.4.0" }
-diesel-adapter = { version = "0.4.1", features = ["postgres"] }
+casbin = { version = "0.4.3" }
+diesel-adapter = { version = "0.4.2", features = ["postgres"] }
 async-std = "1.5.0"
 ```
 
@@ -26,7 +26,7 @@ use diesel_adapter::{DieselAdapter, ConnOptions};
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    let mut m = Box::new(DefaultModel::from_file("examples/rbac_model.conf").await?);
+    let mut m = DefaultModel::from_file("examples/rbac_model.conf").await?;
 
     let mut conn_opts = ConnOptions::default();
     conn_opts
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         .set_database("casbin")
         .set_auth("casbin_rs", "casbin_rs");
 
-    let a = Box::new(DieselAdapter::new(conn_opts)?);
+    let a = DieselAdapter::new(conn_opts)?;
     let mut e = Enforcer::new(m, a).await?;
     Ok(())
 }

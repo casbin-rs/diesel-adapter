@@ -1,6 +1,6 @@
 use crate::schema;
 use crate::Error;
-use casbin::Result;
+use casbin::{error::AdapterError, Result};
 use diesel::{
     self,
     r2d2::{ConnectionManager, PooledConnection},
@@ -8,8 +8,6 @@ use diesel::{
     sql_query, BoolExpressionMethods, Connection as DieselConnection, ExpressionMethods, QueryDsl,
     RunQueryDsl,
 };
-
-use std::error::Error as StdError;
 
 use crate::{
     adapter::TABLE_NAME,
@@ -43,7 +41,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
             TABLE_NAME
         ))
         .execute(&conn)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
     })
 }
 
@@ -68,7 +66,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
             TABLE_NAME
         ))
         .execute(&conn)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
     })
 }
 
@@ -95,7 +93,7 @@ pub fn remove_policy(conn: Pool, pt: &str, rule: Vec<String>) -> Result<bool> {
                 Err(DieselError::NotFound)
             }
         })
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 pub fn remove_policies(conn: Pool, pt: &str, rules: Vec<Vec<String>>) -> Result<bool> {
@@ -122,7 +120,7 @@ pub fn remove_policies(conn: Pool, pt: &str, rules: Vec<Vec<String>>) -> Result<
 
         Ok(true)
     })
-    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 pub fn remove_filtered_policy(
@@ -202,12 +200,12 @@ pub fn remove_filtered_policy(
 
     boxed_query
         .execute(&conn)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
         .and_then(|n| {
             if n == 1 {
                 Ok(true)
             } else {
-                Err(Box::new(Error::DieselError(DieselError::NotFound)) as Box<dyn StdError>)
+                Err(AdapterError(Box::new(Error::DieselError(DieselError::NotFound))).into())
             }
         })
 }
@@ -232,7 +230,7 @@ pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
             })
             .map_err(|_| DieselError::RollbackTransaction)
     })
-    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
@@ -240,7 +238,7 @@ pub(crate) fn load_policy(conn: Pool) -> Result<Vec<CasbinRule>> {
 
     casbin_rules
         .load::<CasbinRule>(&conn)
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
@@ -250,7 +248,7 @@ pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
         .values(&new_rule)
         .execute(&conn)
         .and_then(|n| if n == 1 { Ok(true) } else { Ok(false) })
-        .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 pub(crate) fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<bool> {
@@ -269,7 +267,7 @@ pub(crate) fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<
             })
             .map_err(|_| DieselError::RollbackTransaction)
     })
-    .map_err(|err| Box::new(Error::DieselError(err)) as Box<dyn StdError>)
+    .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
 fn normalize_casbin_rule(mut rule: Vec<String>, field_index: usize) -> Vec<String> {

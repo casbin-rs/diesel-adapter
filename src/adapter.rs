@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use casbin::{Adapter, Model, Result};
+use casbin::{error::AdapterError, Adapter, Error as CasbinError, Model, Result};
 use diesel::{
     self,
     r2d2::{ConnectionManager, Pool},
@@ -7,7 +7,7 @@ use diesel::{
 
 use crate::{error::*, models::*};
 
-use std::{error::Error as StdError, time::Duration};
+use std::time::Duration;
 
 use crate::actions as adapter;
 
@@ -23,11 +23,11 @@ impl<'a> DieselAdapter {
         let pool = Pool::builder()
             .connection_timeout(Duration::from_secs(10))
             .build(manager)
-            .map_err(Error::PoolError)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         let conn = pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>);
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))));
 
         adapter::new(conn).map(|_| Self { pool })
     }
@@ -116,7 +116,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         let rules = adapter::load_policy(conn)?;
 
@@ -141,7 +141,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         let mut rules = vec![];
 
@@ -166,6 +166,7 @@ impl Adapter for DieselAdapter {
                 rules.extend(new_rules);
             }
         }
+
         adapter::save_policy(conn, rules)
     }
 
@@ -173,7 +174,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         if let Some(new_rule) = self.save_policy_line(ptype, &rule) {
             return adapter::add_policy(conn, new_rule);
@@ -191,7 +192,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         let new_rules = rules
             .iter()
@@ -205,7 +206,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         adapter::remove_policy(conn, pt, rule)
     }
@@ -219,7 +220,7 @@ impl Adapter for DieselAdapter {
         let conn = self
             .pool
             .get()
-            .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         adapter::remove_policies(conn, pt, rules)
     }
@@ -235,7 +236,7 @@ impl Adapter for DieselAdapter {
             let conn = self
                 .pool
                 .get()
-                .map_err(|err| Box::new(Error::PoolError(err)) as Box<dyn StdError>)?;
+                .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
             adapter::remove_filtered_policy(conn, pt, field_index, field_values)
         } else {
@@ -254,18 +255,35 @@ mod tests {
 
     #[cfg_attr(feature = "runtime-async-std", async_std::test)]
     #[cfg_attr(feature = "runtime-tokio", tokio::test)]
-    async fn test_adapter() {
-        use casbin::{DefaultModel, Enforcer, FileAdapter};
-
-        let mut conn_opts = ConnOptions::default();
-        conn_opts.set_auth("casbin_rs", "casbin_rs");
-        let file_adapter = Box::new(FileAdapter::new("examples/rbac_policy.csv"));
+    async fn test_create() {
+        use casbin::prelude::*;
 
         let m = DefaultModel::from_file("examples/rbac_model.conf")
             .await
             .unwrap();
 
-        let mut e = Enforcer::new(Box::new(m), file_adapter).await.unwrap();
+        let mut conn_opts = ConnOptions::default();
+        conn_opts.set_auth("casbin_rs", "casbin_rs");
+
+        let adapter = DieselAdapter::new(conn_opts).unwrap();
+
+        assert!(Enforcer::new(m, adapter).await.is_ok());
+    }
+
+    #[cfg_attr(feature = "runtime-async-std", async_std::test)]
+    #[cfg_attr(feature = "runtime-tokio", tokio::test)]
+    async fn test_adapter() {
+        use casbin::prelude::*;
+
+        let mut conn_opts = ConnOptions::default();
+        conn_opts.set_auth("casbin_rs", "casbin_rs");
+        let file_adapter = FileAdapter::new("examples/rbac_policy.csv");
+
+        let m = DefaultModel::from_file("examples/rbac_model.conf")
+            .await
+            .unwrap();
+
+        let mut e = Enforcer::new(m, file_adapter).await.unwrap();
         let mut adapter = DieselAdapter::new(conn_opts).unwrap();
 
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
