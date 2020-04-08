@@ -13,7 +13,7 @@ Add it to `Cargo.toml`
 
 ```
 casbin = { version = "0.4.3" }
-diesel-adapter = { version = "0.4.2", features = ["postgres"] }
+diesel-adapter = { version = "0.4.3", features = ["postgres"] }
 async-std = "1.5.0"
 ```
 
