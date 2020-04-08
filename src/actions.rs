@@ -86,13 +86,7 @@ pub fn remove_policy(conn: Pool, pt: &str, rule: Vec<String>) -> Result<bool> {
 
     diesel::delete(casbin_rules.filter(filter))
         .execute(&conn)
-        .and_then(|n| {
-            if n == 1 {
-                Ok(true)
-            } else {
-                Err(DieselError::NotFound)
-            }
-        })
+        .map(|n| n == 1)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
@@ -200,14 +194,8 @@ pub fn remove_filtered_policy(
 
     boxed_query
         .execute(&conn)
+        .map(|n| n >= 1)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
-        .and_then(|n| {
-            if n == 1 {
-                Ok(true)
-            } else {
-                Err(AdapterError(Box::new(Error::DieselError(DieselError::NotFound))).into())
-            }
-        })
 }
 
 pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
@@ -247,7 +235,7 @@ pub(crate) fn add_policy(conn: Pool, new_rule: NewCasbinRule) -> Result<bool> {
     diesel::insert_into(casbin_rules)
         .values(&new_rule)
         .execute(&conn)
-        .and_then(|n| if n == 1 { Ok(true) } else { Ok(false) })
+        .map(|n| n == 1)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 

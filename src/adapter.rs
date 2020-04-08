@@ -387,7 +387,7 @@ mod tests {
                 to_owned(vec!["alice", "data2_admin", "not_exists"])
             )
             .await
-            .is_ok());
+            .unwrap());
 
         assert!(adapter
             .add_policy("", "g", to_owned(vec!["alice", "data2_admin"]))
