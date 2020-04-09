@@ -5,11 +5,9 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
 };
 
-use crate::{error::*, models::*};
+use crate::{actions as adapter, error::*, models::*};
 
 use std::time::Duration;
-
-use crate::actions as adapter;
 
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<adapter::Connection>>,
@@ -251,23 +249,6 @@ mod tests {
 
     fn to_owned(v: Vec<&str>) -> Vec<String> {
         v.into_iter().map(|x| x.to_owned()).collect()
-    }
-
-    #[cfg_attr(feature = "runtime-async-std", async_std::test)]
-    #[cfg_attr(feature = "runtime-tokio", tokio::test)]
-    async fn test_create() {
-        use casbin::prelude::*;
-
-        let m = DefaultModel::from_file("examples/rbac_model.conf")
-            .await
-            .unwrap();
-
-        let mut conn_opts = ConnOptions::default();
-        conn_opts.set_auth("casbin_rs", "casbin_rs");
-
-        let adapter = DieselAdapter::new(conn_opts).unwrap();
-
-        assert!(Enforcer::new(m, adapter).await.is_ok());
     }
 
     #[cfg_attr(feature = "runtime-async-std", async_std::test)]
