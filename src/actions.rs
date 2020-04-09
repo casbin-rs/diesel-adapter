@@ -35,7 +35,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     v3 VARCHAR NOT NULL,
                     v4 VARCHAR NOT NULL,
                     v5 VARCHAR NOT NULL,
-                    CONSTRAINT unique_key UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 );
             "#,
             TABLE_NAME
@@ -60,7 +60,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     v4 VARCHAR(128) NOT NULL,
                     v5 VARCHAR(128) NOT NULL,
                     PRIMARY KEY(id),
-                    CONSTRAINT unique_key UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             "#,
             TABLE_NAME
