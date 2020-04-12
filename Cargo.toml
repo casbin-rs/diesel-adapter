@@ -10,8 +10,8 @@ readme="README.md"
 
 [dependencies]
 casbin = { version = "0.5.1" }
-diesel = { version = "1.4.3", features = ["r2d2"] }
-async-trait = "0.1.24"
+diesel = { version = "1.4.4", features = ["r2d2"] }
+async-trait = "0.1.30"
 
 [features]
 default = ["postgres", "runtime-async-std"]
