@@ -26,3 +26,11 @@ script:
 - cargo test
 - cargo clippy -- -D warnings
 - cargo fmt --all -- --check
+
+after_success: |
+  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+    # upload report to codecov
+    cargo install cargo-tarpaulin
+    cargo tarpaulin --out Xml
+    bash <(curl -s https://codecov.io/bash)
+  fi
