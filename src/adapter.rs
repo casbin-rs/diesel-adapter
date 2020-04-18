@@ -189,6 +189,8 @@ impl Adapter for DieselAdapter {
                         }
                     }
                 }
+            } else {
+                self.is_filtered = true;
             }
         }
 
@@ -483,6 +485,9 @@ mod tests {
         )
         .await
         .unwrap();
+
+        assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
+        e.set_adapter(adapter).await.unwrap();
 
         let filter = Filter {
             p: vec!["", "domain1"],
