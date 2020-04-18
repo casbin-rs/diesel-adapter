@@ -100,14 +100,16 @@ impl<'a> DieselAdapter {
                             is_filtered = true
                         }
                     }
-                }
-                if sec == 'g' {
+                } else if sec == 'g' {
                     for (i, rule) in f.g.iter().enumerate() {
                         if !rule.is_empty() && rule != &policy[i] {
                             is_filtered = true
                         }
                     }
+                } else {
+                    return None;
                 }
+
                 if !is_filtered {
                     return Some(policy);
                 }
