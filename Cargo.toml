@@ -1,6 +1,6 @@
 [package]
 name = "diesel-adapter"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ homepage="https://github.com/casbin-rs/diesel-adapter"
 readme="README.md"
 
 [dependencies]
-casbin = { version = "0.6.0" }
+casbin = { version = "0.6.2", default-features = false }
 diesel = { version = "1.4.4", features = ["r2d2"] }
 async-trait = "0.1.30"
 
@@ -24,5 +24,5 @@ runtime-async-std = ["casbin/runtime-async-std"]
 
 [dev-dependencies]
 async-std = { version = "1.5.0", features = [ "attributes" ] }
-tokio = { version = "0.2.11", features = [ "full" ] }
+tokio = { version = "0.2.20", features = [ "full" ] }
 
