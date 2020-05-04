@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/diesel-adapter.svg)](https://crates.io/crates/diesel-adapter)
 [![Docs](https://docs.rs/diesel-adapter/badge.svg)](https://docs.rs/diesel-adapter)
-[![Build Status](https://travis-ci.org/casbin-rs/diesel-adapter.svg?branch=master)](https://travis-ci.org/casbin-rs/diesel-adapter)
+[![CI](https://github.com/casbin-rs/diesel-adapter/workflows/CI/badge.svg)](https://github.com/casbin-rs/diesel-adapter/actions)
 [![codecov](https://codecov.io/gh/casbin-rs/diesel-adapter/branch/master/graph/badge.svg)](https://codecov.io/gh/casbin-rs/diesel-adapter)
 
 An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs).
