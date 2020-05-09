@@ -41,7 +41,7 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         env:
-          DATABASE_URL: mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+          DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           args: --out Xml
 

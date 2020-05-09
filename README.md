@@ -28,15 +28,15 @@ async-std = "1.5.0"
 Rename `sample.env` to `.env` and put `DATABASE_URL`, `POOL_SIZE` inside
 
 ```bash
-DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
-# DATABASE_URL=mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+DATABASE_URL=postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
+# DATABASE_URL=mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
 POOL_SIZE=8
 ```
 
 Or you can export `DATABASE_URL`, `POOL_SIZE` 
 
 ```bash
-export DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+export DATABASE_URL=postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
 export POOL_SIZE=8
 ```
 

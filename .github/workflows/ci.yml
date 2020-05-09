@@ -58,7 +58,7 @@ jobs:
       - name: Cargo Test For PostgreSQL,async-std
         uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+          DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           command: test
           args: --no-default-features --features postgres,runtime-async-std
@@ -66,7 +66,7 @@ jobs:
       - name: Cargo Test For PostgreSQL,tokio
         uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+          DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           command: test
           args: --no-default-features --features postgres,runtime-tokio
@@ -74,7 +74,7 @@ jobs:
       - name: Cargo Test For MySQL,async-std
         uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+          DATABASE_URL: mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
         with:
           command: test
           args: --no-default-features --features mysql,runtime-async-std
@@ -82,7 +82,7 @@ jobs:
       - name: Cargo Test For MySQL,tokio
         uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+          DATABASE_URL: mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
         with:
           command: test
           args: --no-default-features --features mysql,runtime-tokio
