@@ -9,9 +9,10 @@ homepage="https://github.com/casbin-rs/diesel-adapter"
 readme="README.md"
 
 [dependencies]
-casbin = { version = "0.6.2", default-features = false }
+casbin = { version = "0.7.1", default-features = false }
 diesel = { version = "1.4.4", features = ["r2d2"] }
 async-trait = "0.1.30"
+dotenv = { version = "0.15.0", default-features = false }
 
 [features]
 default = ["postgres", "runtime-async-std"]

@@ -5,7 +5,12 @@
 [![CI](https://github.com/casbin-rs/diesel-adapter/workflows/CI/badge.svg)](https://github.com/casbin-rs/diesel-adapter/actions)
 [![codecov](https://codecov.io/gh/casbin-rs/diesel-adapter/branch/master/graph/badge.svg)](https://codecov.io/gh/casbin-rs/diesel-adapter)
 
-An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs).
+Diesel Adapter is the [Diesel](https://github.com/diesel-rs/diesel) adapter for [Casbin-rs](https://github.com/casbin/casbin-rs). With this library, Casbin can load policy from Diesel supported database or save policy to it.
+
+Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported databases are:
+
+- [Mysql](https://www.mysql.com/)
+- [Postgres](https://github.com/lib/pq)
 
 
 ## Install
@@ -13,9 +18,26 @@ An adapter designed to work with [casbin-rs](https://github.com/casbin/casbin-rs
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.6.2", default-features = false }
+casbin = { version = "0.7.1", default-features = false }
 diesel-adapter = { version = "0.6.1", features = ["postgres"] }
 async-std = "1.5.0"
+```
+
+## Configure
+
+Rename `sample.env` to `.env` and put `DATABASE_URL`, `POOL_SIZE` inside
+
+```bash
+DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+# DATABASE_URL=mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+POOL_SIZE=8
+```
+
+Or you can export `DATABASE_URL`, `POOL_SIZE` 
+
+```bash
+export DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+export POOL_SIZE=8
 ```
 
 
@@ -28,16 +50,7 @@ use diesel_adapter::{DieselAdapter, ConnOptions};
 #[async_std::main]
 async fn main() -> Result<()> {
     let mut m = DefaultModel::from_file("examples/rbac_model.conf").await?;
-
-    let mut conn_opts = ConnOptions::default();
-    conn_opts
-        .set_hostname("127.0.0.1")
-        .set_port(5432)
-        .set_host("127.0.0.1:5433") // overwrite hostname, port config
-        .set_database("casbin")
-        .set_auth("casbin_rs", "casbin_rs");
-
-    let a = DieselAdapter::new(conn_opts)?;
+    let a = DieselAdapter::new()?;
     let mut e = Enforcer::new(m, a).await?;
     Ok(())
 }

@@ -7,6 +7,7 @@ use diesel::{
 
 use crate::{actions as adapter, error::*, models::*};
 
+use dotenv::dotenv;
 use std::time::Duration;
 
 pub struct DieselAdapter {
@@ -17,10 +18,17 @@ pub struct DieselAdapter {
 pub const TABLE_NAME: &str = "casbin_rules";
 
 impl<'a> DieselAdapter {
-    pub fn new(conn_opts: ConnOptions) -> Result<Self> {
-        let manager = ConnectionManager::new(conn_opts.get_url());
+    pub fn new() -> Result<Self> {
+        dotenv().ok();
+        let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
+        let pool_size: u32 = std::env::var("POOL_SIZE")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(8);
+        let manager = ConnectionManager::new(database_url);
         let pool = Pool::builder()
             .connection_timeout(Duration::from_secs(10))
+            .max_size(pool_size)
             .build(manager)
             .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
@@ -324,8 +332,6 @@ mod tests {
     async fn test_adapter() {
         use casbin::prelude::*;
 
-        let mut conn_opts = ConnOptions::default();
-        conn_opts.set_auth("casbin_rs", "casbin_rs");
         let file_adapter = FileAdapter::new("examples/rbac_policy.csv");
 
         let m = DefaultModel::from_file("examples/rbac_model.conf")
@@ -333,7 +339,7 @@ mod tests {
             .unwrap();
 
         let mut e = Enforcer::new(m, file_adapter).await.unwrap();
-        let mut adapter = DieselAdapter::new(conn_opts).unwrap();
+        let mut adapter = DieselAdapter::new().unwrap();
 
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
 

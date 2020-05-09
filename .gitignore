@@ -15,3 +15,6 @@ Cargo.lock
 /target
 
 .idea/
+
+# Ignore ENV files
+.env
