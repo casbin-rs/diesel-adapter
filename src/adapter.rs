@@ -275,7 +275,7 @@ impl Adapter for DieselAdapter {
                 Ok(false)
             })
             .await
-            .map_err(|e| casbin::error::AdapterError(Box::new(e)))?;
+            .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
         }
 
         #[cfg(feature = "runtime-async-std")]
