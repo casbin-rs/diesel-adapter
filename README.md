@@ -18,7 +18,7 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.7.1", default-features = false }
+casbin = { version = "0.7.4", default-features = false, features = ["incremental"] }
 diesel-adapter = { version = "0.6.1", features = ["postgres"] }
 async-std = "1.5.0"
 ```

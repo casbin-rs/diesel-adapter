@@ -171,9 +171,7 @@ impl Adapter for DieselAdapter {
             .map_err(|e| casbin::error::AdapterError(Box::new(e)))??;
 
         #[cfg(feature = "runtime-async-std")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn))
-            .await
-            .unwrap();
+        let rules = task::spawn_blocking(move || adapter::load_policy(conn)).await?;
 
         for casbin_rule in &rules {
             let rule = load_policy_line(casbin_rule);
@@ -204,9 +202,7 @@ impl Adapter for DieselAdapter {
             .map_err(|e| casbin::error::AdapterError(Box::new(e)))??;
 
         #[cfg(feature = "runtime-async-std")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn))
-            .await
-            .unwrap();
+        let rules = task::spawn_blocking(move || adapter::load_policy(conn)).await?;
 
         for casbin_rule in &rules {
             let rule = load_filtered_policy_line(casbin_rule, &f);
