@@ -13,4 +13,3 @@ mod actions;
 
 pub use adapter::DieselAdapter;
 pub use error::Error;
-pub use models::ConnOptions;
