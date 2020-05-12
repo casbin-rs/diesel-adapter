@@ -11,5 +11,7 @@ mod schema;
 
 mod actions;
 
+pub use casbin;
+
 pub use adapter::DieselAdapter;
 pub use error::Error;

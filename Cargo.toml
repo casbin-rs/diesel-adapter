@@ -9,7 +9,7 @@ homepage="https://github.com/casbin-rs/diesel-adapter"
 readme="README.md"
 
 [dependencies]
-casbin = { version = "0.7.4", default-features = false, features = ["incremental"] }
+casbin = { version = "0.8.1", default-features = false, features = ["incremental"] }
 diesel = { version = "1.4.4", features = ["r2d2"] }
 async-trait = "0.1.30"
 futures = "0.3.4"
