@@ -4,17 +4,17 @@ use diesel::{
     self,
     r2d2::{ConnectionManager, Pool},
 };
+use dotenv::dotenv;
 
 use crate::{actions as adapter, error::*, models::*};
 
-use dotenv::dotenv;
 use std::time::Duration;
 
 #[cfg(feature = "runtime-async-std")]
-use async_std::task;
+use async_std::task::spawn_blocking;
 
 #[cfg(feature = "runtime-tokio")]
-use tokio::task;
+use tokio::task::spawn_blocking;
 
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<adapter::Connection>>,
@@ -49,44 +49,41 @@ impl<'a> DieselAdapter {
     }
 }
 
-pub(crate) fn save_policy_line<'a>(
-    ptype: &'a str,
-    rule: &'a [String],
-) -> Option<NewCasbinRule<'a>> {
+pub(crate) fn save_policy_line(ptype: &str, rule: &[String]) -> Option<NewCasbinRule> {
     if ptype.trim().is_empty() || rule.is_empty() {
         return None;
     }
 
     let mut new_rule = NewCasbinRule {
-        ptype,
-        v0: "",
-        v1: "",
-        v2: "",
-        v3: "",
-        v4: "",
-        v5: "",
+        ptype: ptype.to_owned(),
+        v0: "".to_owned(),
+        v1: "".to_owned(),
+        v2: "".to_owned(),
+        v3: "".to_owned(),
+        v4: "".to_owned(),
+        v5: "".to_owned(),
     };
 
-    new_rule.v0 = &rule[0];
+    new_rule.v0 = rule[0].to_owned();
 
     if rule.len() > 1 {
-        new_rule.v1 = &rule[1];
+        new_rule.v1 = rule[1].to_owned();
     }
 
     if rule.len() > 2 {
-        new_rule.v2 = &rule[2];
+        new_rule.v2 = rule[2].to_owned();
     }
 
     if rule.len() > 3 {
-        new_rule.v3 = &rule[3];
+        new_rule.v3 = rule[3].to_owned();
     }
 
     if rule.len() > 4 {
-        new_rule.v4 = &rule[4];
+        new_rule.v4 = rule[4].to_owned();
     }
 
     if rule.len() > 5 {
-        new_rule.v5 = &rule[5];
+        new_rule.v5 = rule[5].to_owned();
     }
 
     Some(new_rule)
@@ -103,29 +100,26 @@ pub(crate) fn load_policy_line(casbin_rule: &CasbinRule) -> Option<Vec<String>> 
 pub(crate) fn load_filtered_policy_line(
     casbin_rule: &CasbinRule,
     f: &Filter,
-) -> Option<Vec<String>> {
+) -> Option<(bool, Vec<String>)> {
     if let Some(sec) = casbin_rule.ptype.chars().next() {
         if let Some(policy) = normalize_policy(casbin_rule) {
-            let mut is_filtered = false;
+            let mut is_filtered = true;
             if sec == 'p' {
                 for (i, rule) in f.p.iter().enumerate() {
                     if !rule.is_empty() && rule != &policy[i] {
-                        is_filtered = true
+                        is_filtered = false
                     }
                 }
             } else if sec == 'g' {
                 for (i, rule) in f.g.iter().enumerate() {
                     if !rule.is_empty() && rule != &policy[i] {
-                        is_filtered = true
+                        is_filtered = false
                     }
                 }
             } else {
                 return None;
             }
-
-            if !is_filtered {
-                return Some(policy);
-            }
+            return Some((is_filtered, policy));
         }
     }
 
@@ -166,12 +160,12 @@ impl Adapter for DieselAdapter {
             .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         #[cfg(feature = "runtime-tokio")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn))
+        let rules = spawn_blocking(move || adapter::load_policy(conn))
             .await
             .map_err(|e| casbin::error::AdapterError(Box::new(e)))??;
 
         #[cfg(feature = "runtime-async-std")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn)).await?;
+        let rules = spawn_blocking(move || adapter::load_policy(conn)).await?;
 
         for casbin_rule in &rules {
             let rule = load_policy_line(casbin_rule);
@@ -197,26 +191,27 @@ impl Adapter for DieselAdapter {
             .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
         #[cfg(feature = "runtime-tokio")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn))
+        let rules = spawn_blocking(move || adapter::load_policy(conn))
             .await
             .map_err(|e| casbin::error::AdapterError(Box::new(e)))??;
 
         #[cfg(feature = "runtime-async-std")]
-        let rules = task::spawn_blocking(move || adapter::load_policy(conn)).await?;
+        let rules = spawn_blocking(move || adapter::load_policy(conn)).await?;
 
         for casbin_rule in &rules {
             let rule = load_filtered_policy_line(casbin_rule, &f);
 
-            if let Some(rule) = rule {
-                if let Some(ref sec) = casbin_rule.ptype.chars().next().map(|x| x.to_string()) {
-                    if let Some(t1) = m.get_mut_model().get_mut(sec) {
-                        if let Some(t2) = t1.get_mut(&casbin_rule.ptype) {
-                            t2.get_mut_policy().insert(rule);
+            if let Some((is_filtered, rule)) = rule {
+                if is_filtered {
+                    self.is_filtered = is_filtered;
+                    if let Some(ref sec) = casbin_rule.ptype.chars().next().map(|x| x.to_string()) {
+                        if let Some(t1) = m.get_mut_model().get_mut(sec) {
+                            if let Some(t2) = t1.get_mut(&casbin_rule.ptype) {
+                                t2.get_mut_policy().insert(rule);
+                            }
                         }
                     }
                 }
-            } else {
-                self.is_filtered = true;
             }
         }
 
@@ -252,7 +247,17 @@ impl Adapter for DieselAdapter {
                 rules.extend(new_rules);
             }
         }
-        adapter::save_policy(conn, rules)
+
+        #[cfg(feature = "runtime-tokio")]
+        {
+            spawn_blocking(move || adapter::save_policy(conn, rules))
+                .await
+                .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
+        }
+        #[cfg(feature = "runtime-async-std")]
+        {
+            spawn_blocking(move || adapter::save_policy(conn, rules)).await
+        }
     }
 
     async fn add_policy(&mut self, _sec: &str, ptype: &str, rule: Vec<String>) -> Result<bool> {
@@ -264,8 +269,8 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-tokio")]
         {
-            task::spawn_blocking(move || {
-                if let Some(new_rule) = save_policy_line(ptype_c.as_str(), &rule) {
+            spawn_blocking(move || {
+                if let Some(new_rule) = save_policy_line(&ptype_c, &rule) {
                     return adapter::add_policy(conn, new_rule);
                 }
                 Ok(false)
@@ -276,8 +281,8 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-async-std")]
         {
-            task::spawn_blocking(move || {
-                if let Some(new_rule) = save_policy_line(ptype_c.as_str(), &rule) {
+            spawn_blocking(move || {
+                if let Some(new_rule) = save_policy_line(&ptype_c, &rule) {
                     return adapter::add_policy(conn, new_rule);
                 }
                 Ok(false)
@@ -300,10 +305,10 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-tokio")]
         {
-            task::spawn_blocking(move || {
+            spawn_blocking(move || {
                 let new_rules = rules
                     .iter()
-                    .filter_map(|x: &Vec<String>| save_policy_line(ptype_c.as_str(), x))
+                    .filter_map(|x: &Vec<String>| save_policy_line(&ptype_c, x))
                     .collect::<Vec<NewCasbinRule>>();
                 adapter::add_policies(conn, new_rules)
             })
@@ -313,10 +318,10 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-async-std")]
         {
-            task::spawn_blocking(move || {
+            spawn_blocking(move || {
                 let new_rules = rules
                     .iter()
-                    .filter_map(|x: &Vec<String>| save_policy_line(ptype_c.as_str(), x))
+                    .filter_map(|x: &Vec<String>| save_policy_line(&ptype_c, x))
                     .collect::<Vec<NewCasbinRule>>();
                 adapter::add_policies(conn, new_rules)
             })
@@ -333,14 +338,14 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-tokio")]
         {
-            task::spawn_blocking(move || adapter::remove_policy(conn, ptype_c.as_str(), rule))
+            spawn_blocking(move || adapter::remove_policy(conn, &ptype_c, rule))
                 .await
                 .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
         }
 
         #[cfg(feature = "runtime-async-std")]
         {
-            task::spawn_blocking(move || adapter::remove_policy(conn, ptype_c.as_str(), rule)).await
+            spawn_blocking(move || adapter::remove_policy(conn, &ptype_c, rule)).await
         }
     }
 
@@ -358,15 +363,14 @@ impl Adapter for DieselAdapter {
 
         #[cfg(feature = "runtime-tokio")]
         {
-            task::spawn_blocking(move || adapter::remove_policies(conn, ptype_c.as_str(), rules))
+            spawn_blocking(move || adapter::remove_policies(conn, &ptype_c, rules))
                 .await
                 .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
         }
 
         #[cfg(feature = "runtime-async-std")]
         {
-            task::spawn_blocking(move || adapter::remove_policies(conn, ptype_c.as_str(), rules))
-                .await
+            spawn_blocking(move || adapter::remove_policies(conn, &ptype_c, rules)).await
         }
     }
 
@@ -386,13 +390,8 @@ impl Adapter for DieselAdapter {
 
             #[cfg(feature = "runtime-tokio")]
             {
-                task::spawn_blocking(move || {
-                    adapter::remove_filtered_policy(
-                        conn,
-                        ptype_c.as_str(),
-                        field_index,
-                        field_values,
-                    )
+                spawn_blocking(move || {
+                    adapter::remove_filtered_policy(conn, &ptype_c, field_index, field_values)
                 })
                 .await
                 .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
@@ -400,13 +399,8 @@ impl Adapter for DieselAdapter {
 
             #[cfg(feature = "runtime-async-std")]
             {
-                task::spawn_blocking(move || {
-                    adapter::remove_filtered_policy(
-                        conn,
-                        ptype_c.as_str(),
-                        field_index,
-                        field_values,
-                    )
+                spawn_blocking(move || {
+                    adapter::remove_filtered_policy(conn, &ptype_c, field_index, field_values)
                 })
                 .await
             }
