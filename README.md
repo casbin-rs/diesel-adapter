@@ -18,7 +18,6 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 Add it to `Cargo.toml`
 
 ```
-casbin = { version = "0.7.4", default-features = false, features = ["incremental"] }
 diesel-adapter = { version = "0.6.1", features = ["postgres"] }
 async-std = "1.5.0"
 ```
@@ -44,7 +43,7 @@ export POOL_SIZE=8
 ## Example
 
 ```rust
-use casbin::prelude::*;
+use diesel_adapter::casbin::prelude::*;
 use diesel_adapter::{DieselAdapter, ConnOptions};
 
 #[async_std::main]
