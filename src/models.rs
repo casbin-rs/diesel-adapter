@@ -14,12 +14,12 @@ pub(crate) struct CasbinRule {
 
 #[derive(Insertable, Clone)]
 #[table_name = "casbin_rules"]
-pub(crate) struct NewCasbinRule<'a> {
-    pub ptype: &'a str,
-    pub v0: &'a str,
-    pub v1: &'a str,
-    pub v2: &'a str,
-    pub v3: &'a str,
-    pub v4: &'a str,
-    pub v5: &'a str,
+pub(crate) struct NewCasbinRule {
+    pub ptype: String,
+    pub v0: String,
+    pub v1: String,
+    pub v2: String,
+    pub v3: String,
+    pub v4: String,
+    pub v5: String,
 }
