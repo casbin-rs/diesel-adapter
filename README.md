@@ -44,7 +44,7 @@ export POOL_SIZE=8
 
 ```rust
 use diesel_adapter::casbin::prelude::*;
-use diesel_adapter::{DieselAdapter, ConnOptions};
+use diesel_adapter::DieselAdapter;
 
 #[async_std::main]
 async fn main() -> Result<()> {
