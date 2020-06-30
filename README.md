@@ -19,7 +19,7 @@ Add it to `Cargo.toml`
 
 ```
 diesel-adapter = { version = "0.7.0", features = ["postgres"] }
-async-std = "1.5.0"
+async-std = "1.6.2"
 ```
 
 ## Configure

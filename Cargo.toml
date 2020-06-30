@@ -5,16 +5,16 @@ authors = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 edition = "2018"
 license = "Apache-2.0"
 description = "Diesel adapter for casbin-rs"
-homepage="https://github.com/casbin-rs/diesel-adapter"
-readme="README.md"
+homepage= "https://github.com/casbin-rs/diesel-adapter"
+readme= "README.md"
 
 [dependencies]
-casbin = { version = "0.9.2", default-features = false, features = ["incremental"] }
-diesel = { version = "1.4.4", features = ["r2d2"] }
-async-trait = "0.1.30"
-futures = "0.3.4"
-tokio = { version = "0.2.20", default-features = false, optional = true }
-async-std = { version = "1.5.0", default-features = false, optional = true }
+casbin = { version = "1.0.0", default-features = false, features = ["incremental"] }
+diesel = { version = "1.4.5", features = ["r2d2"] }
+async-trait = "0.1.36"
+futures = "0.3.5"
+tokio = { version = "0.2.21", default-features = false, optional = true }
+async-std = { version = "1.6.2", default-features = false, optional = true }
 dotenv = { version = "0.15.0", default-features = false }
 
 [features]
@@ -27,6 +27,6 @@ runtime-tokio = ["casbin/runtime-tokio", "tokio/blocking", "tokio/rt-core"]
 runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
 
 [dev-dependencies]
-async-std = { version = "1.5.0", features = [ "attributes", "unstable"] }
-tokio = { version = "0.2.20", features = [ "full" ] }
+async-std = { version = "1.6.2", features = [ "attributes", "unstable"] }
+tokio = { version = "0.2.21", features = [ "full" ] }
 
