@@ -184,7 +184,7 @@ impl Adapter for DieselAdapter {
         Ok(())
     }
 
-    async fn load_filtered_policy(&mut self, m: &mut dyn Model, f: Filter) -> Result<()> {
+    async fn load_filtered_policy<'a>(&mut self, m: &mut dyn Model, f: Filter<'a>) -> Result<()> {
         let conn = self
             .pool
             .get()
