@@ -48,7 +48,7 @@ jobs:
           override: true
 
       - name: Install PostgreSQL & MySQL Dependencies
-        run: sudo apt-get install libpq-dev postgresql-client mysql-client libmysqlclient-dev
+        run: sudo apt-get update && sudo apt-get install libpq-dev postgresql-client mysql-client libmysqlclient-dev
 
       - name: Cargo Build
         uses: actions-rs/cargo@v1
