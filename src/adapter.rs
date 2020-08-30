@@ -4,17 +4,16 @@ use diesel::{
     self,
     r2d2::{ConnectionManager, Pool},
 };
-use dotenv::dotenv;
 
 use crate::{actions as adapter, error::*, models::*};
-
-use std::time::Duration;
 
 #[cfg(feature = "runtime-async-std")]
 use async_std::task::spawn_blocking;
 
 #[cfg(feature = "runtime-tokio")]
 use tokio::task::spawn_blocking;
+
+use std::time::Duration;
 
 pub struct DieselAdapter {
     pool: Pool<ConnectionManager<adapter::Connection>>,
@@ -23,15 +22,9 @@ pub struct DieselAdapter {
 
 pub const TABLE_NAME: &str = "casbin_rules";
 
-impl<'a> DieselAdapter {
-    pub fn new() -> Result<Self> {
-        dotenv().ok();
-        let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-        let pool_size: u32 = std::env::var("POOL_SIZE")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(8);
-        let manager = ConnectionManager::new(database_url);
+impl DieselAdapter {
+    pub fn new<U: Into<String>>(url: U, pool_size: u32) -> Result<Self> {
+        let manager = ConnectionManager::new(url);
         let pool = Pool::builder()
             .connection_timeout(Duration::from_secs(10))
             .max_size(pool_size)
@@ -182,6 +175,24 @@ impl Adapter for DieselAdapter {
         }
 
         Ok(())
+    }
+
+    async fn clear_policy(&mut self) -> Result<()> {
+        let conn = self
+            .pool
+            .get()
+            .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
+
+        #[cfg(feature = "runtime-tokio")]
+        {
+            spawn_blocking(move || adapter::clear_policy(conn))
+                .await
+                .map_err(|e| casbin::error::AdapterError(Box::new(e)))?
+        }
+        #[cfg(feature = "runtime-async-std")]
+        {
+            spawn_blocking(move || adapter::clear_policy(conn)).await
+        }
     }
 
     async fn load_filtered_policy<'a>(&mut self, m: &mut dyn Model, f: Filter<'a>) -> Result<()> {
@@ -381,7 +392,7 @@ impl Adapter for DieselAdapter {
         field_index: usize,
         field_values: Vec<String>,
     ) -> Result<bool> {
-        if field_index <= 5 && !field_values.is_empty() && field_values.len() >= 6 - field_index {
+        if field_index <= 5 && !field_values.is_empty() {
             let conn = self
                 .pool
                 .get()
@@ -434,7 +445,18 @@ mod tests {
             .unwrap();
 
         let mut e = Enforcer::new(m, file_adapter).await.unwrap();
-        let mut adapter = DieselAdapter::new().unwrap();
+        let mut adapter = {
+            #[cfg(feature = "postgres")]
+            {
+                DieselAdapter::new("postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin", 8)
+                    .unwrap()
+            }
+
+            #[cfg(feature = "mysql")]
+            {
+                DieselAdapter::new("mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin", 8).unwrap()
+            }
+        };
 
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
 
@@ -598,11 +620,11 @@ mod tests {
         };
 
         e.load_filtered_policy(filter).await.unwrap();
-        assert!(e.enforce(&["alice", "domain1", "data1", "read"]).unwrap());
-        assert!(e.enforce(&["alice", "domain1", "data1", "write"]).unwrap());
-        assert!(!e.enforce(&["alice", "domain1", "data2", "read"]).unwrap());
-        assert!(!e.enforce(&["alice", "domain1", "data2", "write"]).unwrap());
-        assert!(!e.enforce(&["bob", "domain2", "data2", "read"]).unwrap());
-        assert!(!e.enforce(&["bob", "domain2", "data2", "write"]).unwrap());
+        assert!(e.enforce(("alice", "domain1", "data1", "read")).unwrap());
+        assert!(e.enforce(("alice", "domain1", "data1", "write")).unwrap());
+        assert!(!e.enforce(("alice", "domain1", "data2", "read")).unwrap());
+        assert!(!e.enforce(("alice", "domain1", "data2", "write")).unwrap());
+        assert!(!e.enforce(("bob", "domain2", "data2", "read")).unwrap());
+        assert!(!e.enforce(("bob", "domain2", "data2", "write")).unwrap());
     }
 }

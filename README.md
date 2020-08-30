@@ -18,27 +18,9 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 Add it to `Cargo.toml`
 
 ```
-diesel-adapter = { version = "0.7.3", features = ["postgres"] }
-async-std = "1.6.2"
+diesel-adapter = { version = "0.8.0", features = ["postgres"] }
+async-std = "1.6.3"
 ```
-
-## Configure
-
-Rename `sample.env` to `.env` and put `DATABASE_URL`, `POOL_SIZE` inside
-
-```bash
-DATABASE_URL=postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
-# DATABASE_URL=mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
-POOL_SIZE=8
-```
-
-Or you can export `DATABASE_URL`, `POOL_SIZE` 
-
-```bash
-export DATABASE_URL=postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
-export POOL_SIZE=8
-```
-
 
 ## Example
 
@@ -49,7 +31,7 @@ use diesel_adapter::DieselAdapter;
 #[async_std::main]
 async fn main() -> Result<()> {
     let mut m = DefaultModel::from_file("examples/rbac_model.conf").await?;
-    let a = DieselAdapter::new()?;
+    let a = DieselAdapter::new("postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin", 8)?;
     let mut e = Enforcer::new(m, a).await?;
     Ok(())
 }

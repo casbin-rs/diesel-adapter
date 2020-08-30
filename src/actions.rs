@@ -18,6 +18,8 @@ use crate::{
 pub type Connection = diesel::PgConnection;
 #[cfg(feature = "mysql")]
 pub type Connection = diesel::MysqlConnection;
+#[cfg(feature = "sqlite")]
+pub type Connection = diesel::SqliteConnection;
 
 type Pool = PooledConnection<ConnectionManager<Connection>>;
 
@@ -62,6 +64,30 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     PRIMARY KEY(id),
                     CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            "#,
+            TABLE_NAME
+        ))
+        .execute(&conn)
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
+    })
+}
+
+#[cfg(feature = "sqlite")]
+pub fn new(conn: Result<Pool>) -> Result<usize> {
+    conn.and_then(|conn| {
+        sql_query(format!(
+            r#"
+                CREATE TABLE IF NOT EXISTS {} (
+                    id INTEGER PRIMARY KEY,
+                    ptype VARCHAR(12) NOT NULL,
+                    v0 VARCHAR(128) NOT NULL,
+                    v1 VARCHAR(128) NOT NULL,
+                    v2 VARCHAR(128) NOT NULL,
+                    v3 VARCHAR(128) NOT NULL,
+                    v4 VARCHAR(128) NOT NULL,
+                    v5 VARCHAR(128) NOT NULL,
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                );
             "#,
             TABLE_NAME
         ))
@@ -198,6 +224,14 @@ pub fn remove_filtered_policy(
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
 }
 
+pub(crate) fn clear_policy(conn: Pool) -> Result<()> {
+    use schema::casbin_rules::dsl::casbin_rules;
+    diesel::delete(casbin_rules)
+        .execute(&conn)
+        .map(|_| ())
+        .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
+}
+
 pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
     use schema::casbin_rules::dsl::casbin_rules;
 
@@ -208,7 +242,7 @@ pub(crate) fn save_policy(conn: Pool, rules: Vec<NewCasbinRule>) -> Result<()> {
 
         diesel::insert_into(casbin_rules)
             .values(&rules)
-            .execute(&conn)
+            .execute(&*conn)
             .and_then(|n| {
                 if n == rules.len() {
                     Ok(())
@@ -245,7 +279,7 @@ pub(crate) fn add_policies(conn: Pool, new_rules: Vec<NewCasbinRule>) -> Result<
     conn.transaction::<_, DieselError, _>(|| {
         diesel::insert_into(casbin_rules)
             .values(&new_rules)
-            .execute(&conn)
+            .execute(&*conn)
             .and_then(|n| {
                 if n == new_rules.len() {
                     Ok(true)
