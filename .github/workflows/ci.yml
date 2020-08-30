@@ -34,9 +34,9 @@ jobs:
       - name: Set Up MySQL
         uses: mirromutth/mysql-action@v1.1
         with:
-          mysql version: '8.0' 
-          mysql database: 'casbin' 
-          mysql user: 'casbin_rs' 
+          mysql version: '8.0'
+          mysql database: 'casbin'
+          mysql user: 'casbin_rs'
           mysql password: 'casbin_rs'
 
       - name: Install Rust toolchain
@@ -57,32 +57,24 @@ jobs:
 
       - name: Cargo Test For PostgreSQL,async-std
         uses: actions-rs/cargo@v1
-        env:
-          DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           command: test
           args: --no-default-features --features postgres,runtime-async-std
 
       - name: Cargo Test For PostgreSQL,tokio
         uses: actions-rs/cargo@v1
-        env:
-          DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           command: test
           args: --no-default-features --features postgres,runtime-tokio
 
       - name: Cargo Test For MySQL,async-std
         uses: actions-rs/cargo@v1
-        env:
-          DATABASE_URL: mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
         with:
           command: test
           args: --no-default-features --features mysql,runtime-async-std
 
       - name: Cargo Test For MySQL,tokio
         uses: actions-rs/cargo@v1
-        env:
-          DATABASE_URL: mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin
         with:
           command: test
           args: --no-default-features --features mysql,runtime-tokio
