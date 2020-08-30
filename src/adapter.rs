@@ -445,8 +445,18 @@ mod tests {
             .unwrap();
 
         let mut e = Enforcer::new(m, file_adapter).await.unwrap();
-        let mut adapter =
-            DieselAdapter::new("postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin", 8).unwrap();
+        let mut adapter = {
+            #[cfg(feature = "postgres")]
+            {
+                DieselAdapter::new("postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin", 8)
+                    .unwrap()
+            }
+
+            #[cfg(feature = "mysql")]
+            {
+                DieselAdapter::new("mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin", 8).unwrap()
+            }
+        };
 
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
 
