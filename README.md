@@ -18,8 +18,8 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 Add it to `Cargo.toml`
 
 ```
-diesel-adapter = { version = "0.8.0", features = ["postgres"] }
-async-std = "1.6.3"
+diesel-adapter = { version = "0.8.1", features = ["postgres"] }
+async-std = "1.6.4"
 ```
 
 ## Example
@@ -41,5 +41,6 @@ async fn main() -> Result<()> {
 
 - `postgres`
 - `mysql`
+- `sqlite`
 
-*Attention*: `postgres` and `mysql` are mutual exclusive which means that you can only activate one of them. Currently we don't have support for `sqlite`, it may be added in the near future.
+*Attention*: `postgres`, `mysql`, `sqlite` are mutual exclusive which means that you can only activate one of them.
