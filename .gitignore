@@ -18,3 +18,5 @@ Cargo.lock
 
 # Ignore ENV files
 .env
+
+.vscode/
