@@ -13,7 +13,7 @@ casbin = { version = "2.0.2", default-features = false }
 diesel = { version = "1.4.5", default-features = false, features = ["r2d2"] }
 async-trait = "0.1.40"
 futures = "0.3.5"
-tokio = { version = "0.2.22", default-features = false, optional = true }
+tokio = { version = "0.3.5", default-features = false, optional = true }
 async-std = { version = "1.6.4", default-features = false, optional = true }
 
 [features]
@@ -28,5 +28,5 @@ runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
 
 [dev-dependencies]
 async-std = { version = "1.6.4", features = [ "attributes", "unstable"] }
-tokio = { version = "0.2.22", features = [ "full" ] }
+tokio = { version = "0.3.5", features = [ "full" ] }
 
