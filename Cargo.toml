@@ -24,7 +24,7 @@ postgres = ["diesel/postgres"]
 sqlite   = ["diesel/sqlite"]
 
 runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
-runtime-tokio     = ["casbin/runtime-tokio"]
+runtime-tokio     = ["casbin/runtime-tokio", "tokio/rt"]
 
 [dev-dependencies]
 async-std = { version = "1.8.0", features = ["attributes"] }
