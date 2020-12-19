@@ -1,32 +1,31 @@
 [package]
-name = "diesel-adapter"
-version = "0.8.1"
-authors = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
-edition = "2018"
-license = "Apache-2.0"
+authors     = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 description = "Diesel adapter for casbin-rs"
-homepage= "https://github.com/casbin-rs/diesel-adapter"
-readme= "README.md"
+edition     = "2018"
+homepage    = "https://github.com/casbin-rs/diesel-adapter"
+license     = "Apache-2.0"
+name        = "diesel-adapter"
+readme      = "README.md"
+version     = "0.8.2"
 
 [dependencies]
-casbin = { version = "2.0.2", default-features = false }
-diesel = { version = "1.4.5", default-features = false, features = ["r2d2"] }
+async-std   = { version = "1.8.0", default-features = false, optional = true }
 async-trait = "0.1.40"
-futures = "0.3.5"
-tokio = { version = "0.2.22", default-features = false, optional = true }
-async-std = { version = "1.6.4", default-features = false, optional = true }
+casbin      = { version = "2.0.4", default-features = false }
+diesel      = { version = "1.4.5", default-features = false, features = ["r2d2"] }
+futures     = "0.3.5"
+tokio       = { version = "0.3.5", default-features = false, optional = true }
 
 [features]
 default = ["postgres", "runtime-async-std"]
 
+mysql    = ["diesel/mysql"]
 postgres = ["diesel/postgres"]
-mysql = ["diesel/mysql"]
-sqlite = ["diesel/sqlite"]
+sqlite   = ["diesel/sqlite"]
 
-runtime-tokio = ["casbin/runtime-tokio", "tokio/blocking", "tokio/rt-core"]
 runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
+runtime-tokio     = ["casbin/runtime-tokio"]
 
 [dev-dependencies]
-async-std = { version = "1.6.4", features = [ "attributes", "unstable"] }
-tokio = { version = "0.2.22", features = [ "full" ] }
-
+async-std = { version = "1.8.0", features = ["attributes"] }
+tokio     = { version = "0.3.5", features = ["full"] }
