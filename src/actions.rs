@@ -30,14 +30,14 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
             r#"
                 CREATE TABLE IF NOT EXISTS {} (
                     id SERIAL PRIMARY KEY,
-                    ptype VARCHAR NOT NULL,
+                    p_type VARCHAR NOT NULL,
                     v0 VARCHAR NOT NULL,
                     v1 VARCHAR NOT NULL,
                     v2 VARCHAR NOT NULL,
                     v3 VARCHAR NOT NULL,
                     v4 VARCHAR NOT NULL,
                     v5 VARCHAR NOT NULL,
-                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(p_type, v0, v1, v2, v3, v4, v5)
                 );
             "#,
             TABLE_NAME
@@ -54,7 +54,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
             r#"
                 CREATE TABLE IF NOT EXISTS {} (
                     id INT NOT NULL AUTO_INCREMENT,
-                    ptype VARCHAR(12) NOT NULL,
+                    p_type VARCHAR(12) NOT NULL,
                     v0 VARCHAR(128) NOT NULL,
                     v1 VARCHAR(128) NOT NULL,
                     v2 VARCHAR(128) NOT NULL,
@@ -62,7 +62,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     v4 VARCHAR(128) NOT NULL,
                     v5 VARCHAR(128) NOT NULL,
                     PRIMARY KEY(id),
-                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(p_type, v0, v1, v2, v3, v4, v5)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             "#,
             TABLE_NAME
@@ -79,14 +79,14 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
             r#"
                 CREATE TABLE IF NOT EXISTS {} (
                     id INTEGER PRIMARY KEY,
-                    ptype VARCHAR(12) NOT NULL,
+                    p_type VARCHAR(12) NOT NULL,
                     v0 VARCHAR(128) NOT NULL,
                     v1 VARCHAR(128) NOT NULL,
                     v2 VARCHAR(128) NOT NULL,
                     v3 VARCHAR(128) NOT NULL,
                     v4 VARCHAR(128) NOT NULL,
                     v5 VARCHAR(128) NOT NULL,
-                    CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
+                    CONSTRAINT unique_key_diesel_adapter UNIQUE(p_type, v0, v1, v2, v3, v4, v5)
                 );
             "#,
             TABLE_NAME

@@ -19,8 +19,8 @@ pub struct DieselAdapter {
     pool: Pool<ConnectionManager<adapter::Connection>>,
     is_filtered: bool,
 }
-
-pub const TABLE_NAME: &str = "casbin_rules";
+// adapter will use default tablename "casbin_rule".
+pub const TABLE_NAME: &str = "casbin_rule";
 
 impl DieselAdapter {
     pub fn new<U: Into<String>>(url: U, pool_size: u32) -> Result<Self> {
