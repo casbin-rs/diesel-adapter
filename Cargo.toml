@@ -14,7 +14,7 @@ async-trait = "0.1.40"
 casbin      = { version = "2.0.4", default-features = false }
 diesel      = { version = "1.4.5", default-features = false, features = ["r2d2"] }
 futures     = "0.3.5"
-tokio       = { version = "0.3.5", default-features = false, optional = true }
+tokio       = { version = "1.0.0", default-features = false, optional = true }
 
 [features]
 default = ["postgres", "runtime-async-std"]
@@ -28,4 +28,4 @@ runtime-tokio     = ["casbin/runtime-tokio", "tokio/rt"]
 
 [dev-dependencies]
 async-std = { version = "1.8.0", features = ["attributes"] }
-tokio     = { version = "0.3.5", features = ["full"] }
+tokio     = { version = "1.0.0", features = ["full"] }
