@@ -1,7 +1,7 @@
 table! {
-    casbin_rules (id) {
+    casbin_rule (id) {
         id -> Integer,
-        ptype -> Varchar,
+        p_type -> Varchar,
         v0 -> Varchar,
         v1 -> Varchar,
         v2 -> Varchar,
