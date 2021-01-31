@@ -20,7 +20,7 @@ pub struct DieselAdapter {
     is_filtered: bool,
 }
 
-pub const TABLE_NAME: &str = "casbin_rules";
+pub const TABLE_NAME: &str = "casbin_rule";
 
 impl DieselAdapter {
     pub fn new<U: Into<String>>(url: U, pool_size: u32) -> Result<Self> {

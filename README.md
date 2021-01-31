@@ -11,7 +11,15 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 
 - [Mysql](https://www.mysql.com/)
 - [Postgres](https://github.com/lib/pq)
+- [SQLite](https://www.sqlite.org)
 
+## Notice
+In order to unify the database table name in Casbin ecosystem, we decide to use `casbin_rule` instead of `casbin_rules` from version `0.9.0`. If you are using old version `diesel-adapter` in your production environment, please use following command and update `diesel-adapter` version:
+
+````SQL
+# MySQL & PostgreSQL & SQLite
+ALTER TABLE casbin_rules RENAME TO casbin_rule;
+````
 
 ## Install
 
@@ -19,8 +27,9 @@ Add it to `Cargo.toml`
 
 ```
 diesel-adapter = { version = "0.8.3", features = ["postgres"] }
-async-std = "1.8.0"
+async-std = "1.9.0"
 ```
+**Warning**: `tokio v1.0` or later is supported from `diesel-adapter v0.9.0`, we recommend that you upgrade the relevant components to ensure that they work properly. The last version that supports `tokio v0.2` is `diesel-adapter v0.8.3` , you can choose according to your needs.
 
 ## Example
 
