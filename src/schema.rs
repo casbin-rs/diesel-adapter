@@ -1,5 +1,5 @@
 table! {
-    casbin_rules (id) {
+    casbin_rule (id) {
         id -> Integer,
         ptype -> Varchar,
         v0 -> Varchar,

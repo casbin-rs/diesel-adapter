@@ -6,15 +6,16 @@ homepage    = "https://github.com/casbin-rs/diesel-adapter"
 license     = "Apache-2.0"
 name        = "diesel-adapter"
 readme      = "README.md"
-version     = "0.8.3"
+version     = "0.9.0"
 
 [dependencies]
-async-std   = { version = "1.8.0", default-features = false, optional = true }
-async-trait = "0.1.40"
-casbin      = { version = "~2.0.5", default-features = false }
+async-std   = { version = "1.9.0", default-features = false, optional = true }
+async-trait = "0.1.42"
+casbin      = { version = "2.0.6", default-features = false }
 diesel      = { version = "1.4.5", default-features = false, features = ["r2d2"] }
-futures     = "~0.3"
-tokio       = { version = "~0.2.22", default-features = false, optional = true }
+futures     = "0.3"
+tokio       = { version = "1.1.1", default-features = false, optional = true }
+once_cell = "1.5.2"
 
 [features]
 default = ["postgres", "runtime-tokio"]
@@ -24,8 +25,8 @@ postgres = ["diesel/postgres"]
 sqlite   = ["diesel/sqlite"]
 
 runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
-runtime-tokio     = ["casbin/runtime-tokio", "tokio/blocking", "tokio/rt-core"]
+runtime-tokio     = ["casbin/runtime-tokio", "tokio/rt"]
 
 [dev-dependencies]
-async-std = { version = "1.8.0", features = ["attributes"] }
-tokio     = { version = "~0.2.22", features = ["full"] }
+async-std = { version = "1.9.0", features = ["attributes"] }
+tokio     = { version = "1.1.1", features = ["full"] }
