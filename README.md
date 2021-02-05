@@ -37,7 +37,7 @@ tokio = "1.1.1"
 use diesel_adapter::casbin::prelude::*;
 use diesel_adapter::DieselAdapter;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     let mut m = DefaultModel::from_file("examples/rbac_model.conf").await?;
     let a = DieselAdapter::new("postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin", 8)?;
