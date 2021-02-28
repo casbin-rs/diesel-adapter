@@ -31,6 +31,26 @@ tokio = "1.1.1"
 ```
 **Warning**: `tokio v1.0` or later is supported from `diesel-adapter v0.9.0`, we recommend that you upgrade the relevant components to ensure that they work properly. The last version that supports `tokio v0.2` is `diesel-adapter v0.8.3` , you can choose according to your needs.
 
+## Configure
+
+Configure `env`
+
+Rename `sample.env` to `.env` and put `DATABASE_URL`, `POOL_SIZE`   inside
+
+```bash
+DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+# DATABASE_URL=mysql://casbin_rs:casbin_rs@localhost:3306/casbin
+# DATABASE_URL=casbin.db
+POOL_SIZE=8
+```
+
+Or you can export `DATABASE_URL`, `POOL_SIZE`
+
+```bash
+export DATABASE_URL=postgres://casbin_rs:casbin_rs@localhost:5432/casbin
+export POOL_SIZE=8
+```
+
 ## Example
 
 ```rust
