@@ -47,8 +47,8 @@ jobs:
           components: rustfmt, clippy
           override: true
 
-      - name: Install PostgreSQL & MySQL Dependencies
-        run: sudo apt-get update && sudo apt-get install libpq-dev postgresql-client mysql-client libmysqlclient-dev
+      - name: Install PostgreSQL & MySQL & SQLite Dependencies
+        run: sudo apt-get install libpq-dev postgresql-client mysql-client libmysqlclient-dev libsqlite3-dev sqlite3
 
       - name: Cargo Build
         uses: actions-rs/cargo@v1
@@ -78,6 +78,18 @@ jobs:
         with:
           command: test
           args: --no-default-features --features mysql,runtime-tokio
+
+      - name: Cargo Test For SQLite,async-std
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features sqlite,runtime-async-std
+
+      - name: Cargo Test For SQLite,tokio
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features sqlite,runtime-tokio
 
       - name: Cargo Clippy
         uses: actions-rs/cargo@v1

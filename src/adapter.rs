@@ -456,6 +456,11 @@ mod tests {
             {
                 DieselAdapter::new("mysql://casbin_rs:casbin_rs@127.0.0.1:3306/casbin", 8).unwrap()
             }
+
+            #[cfg(feature = "sqlite")]
+            {
+                DieselAdapter::new("casbin.db", 8).unwrap()
+            }
         };
 
         assert!(adapter.save_policy(e.get_mut_model()).await.is_ok());
