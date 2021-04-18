@@ -30,3 +30,11 @@ runtime-tokio     = ["casbin/runtime-tokio", "tokio/rt"]
 [dev-dependencies]
 async-std = { version = "1.9.0", features = ["attributes"] }
 tokio     = { version = "1.1.1", features = ["full"] }
+
+[profile.release]
+codegen-units = 1
+lto           = true
+opt-level     = 3
+
+[profile.dev]
+split-debuginfo = "unpacked"
