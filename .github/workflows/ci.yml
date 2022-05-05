@@ -11,29 +11,11 @@ on:
 jobs:
   build:
     name: Auto Build CI
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:11
-        env:
-          POSTGRES_USER: casbin_rs
-          POSTGRES_PASSWORD: casbin_rs
-          POSTGRES_DB: casbin
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_DATABASE: casbin
-          MYSQL_USER: casbin_rs
-          MYSQL_PASSWORD: casbin_rs
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        rust: [ stable, beta, nightly ]
 
     steps:
       - name: Checkout Repository
@@ -43,12 +25,69 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
           override: true
 
-      - name: Install PostgreSQL & MySQL & SQLite Dependencies
-        run: sudo apt-get install libpq-dev postgresql-client mysql-client libmysqlclient-dev libsqlite3-dev sqlite3
+      - name: Setup PostgreSQL & MySQL & SQLite (for ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev postgresql libsqlite3-dev sqlite3 libmysqlclient-dev
+          echo "host    all             all             127.0.0.1/32            md5" > sudo tee -a /etc/postgresql/10/main/pg_hba.conf
+          sudo service postgresql restart && sleep 3
+          sudo -u postgres createuser casbin_rs
+          sudo -u postgres createdb casbin
+          sudo -u postgres psql -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
+          sudo service postgresql restart && sleep 3
+          sudo systemctl start mysql.service
+          sudo apt-get update
+          sudo apt-get -y install libmysqlclient-dev
+          mysql -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on \`casbin\`.* to 'casbin_rs'@'localhost';" -uroot -proot
+
+      - name: Setup PostgreSQL & MySQL & SQLite (for macOS)
+        if: matrix.os == 'macOS-latest'
+        run: |
+          brew update
+          brew install mariadb@10.5 sqlite
+          pg_ctl -D /usr/local/var/postgres start
+          sleep 3
+          createuser casbin_rs
+          createdb casbin
+          psql postgres -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
+          /usr/local/opt/mariadb@10.5/bin/mysql_install_db
+          /usr/local/opt/mariadb@10.5/bin/mysql.server start
+          sleep 3
+          /usr/local/opt/mariadb@10.5/bin/mysql -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on \`casbin\`.* to 'casbin_rs'@'localhost';" -urunner
+          echo "MYSQLCLIENT_LIB_DIR=/usr/local/opt/mariadb@10.5/lib" >> $GITHUB_ENV
+
+      - name: Setup PostgreSQL & MySQL & SQLite (for windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          choco install postgresql11 --force --params '/Password:root'
+          choco install mysql sqlite
+          "C:\Program Files\PostgreSQL\11\bin\createuser" casbin_rs
+          "C:\Program Files\PostgreSQL\11\bin\createdb" casbin
+          "C:\Program Files\PostgreSQL\11\bin\psql" -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
+          "C:\tools\mysql\current\bin\mysql" -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on `casbin`.* to 'casbin_rs'@'localhost';" -uroot
+          cd /D C:\ProgramData\chocolatey\lib\SQLite\tools
+          dir "C:\Program Files\Microsoft Visual Studio"
+          dir "C:\Program Files\Microsoft Visual Studio\2022"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build"
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          lib /machine:x64 /def:sqlite3.def /out:sqlite3.lib
+
+      - name: Set environment variables (for windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\11\lib" >> $GITHUB_ENV
+          echo "MYSQLCLIENT_LIB_DIR=C:\tools\mysql\current\lib" >> $GITHUB_ENV
+          echo "SQLITE3_LIB_DIR=C:\ProgramData\chocolatey\lib\SQLite\tools" >> $GITHUB_ENV
 
       - name: Cargo Build
         uses: actions-rs/cargo@v1
