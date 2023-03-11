@@ -39,7 +39,7 @@ jobs:
         run: sudo apt-get install libpq-dev postgresql-client
 
       - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+        uses: actions-rs/tarpaulin
         env:
           DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
