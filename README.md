@@ -14,7 +14,7 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 - [SQLite](https://www.sqlite.org)
 
 ## Notice
-In order to unify the database table name in Casbin ecosystem, we decide to use `casbin_rule` instead of `casbin_rules` from version `0.9.0`. If you are using old version `diesel-adapter` in your production environment, please use following command and update `diesel-adapter` version:
+In order to unify the database table name in Casbin ecosystem, we decided to use `casbin_rule` instead of `casbin_rules` from version `0.9.0`. If you are using an old version `diesel-adapter` in your production environment, please use the following command and update `diesel-adapter` version:
 
 ````SQL
 # MySQL & PostgreSQL & SQLite
