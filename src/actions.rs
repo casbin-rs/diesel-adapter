@@ -163,7 +163,7 @@ pub fn remove_filtered_policy(
                 ptype
                     .eq(pt)
                     .and(v4.is_null().or(v4.eq(&field_values[0])))
-                    .and(v4.is_null().or(v5.eq(&field_values[1]))),
+                    .and(v5.is_null().or(v5.eq(&field_values[1]))),
             )
             .into_boxed()
     } else if field_index == 3 {
