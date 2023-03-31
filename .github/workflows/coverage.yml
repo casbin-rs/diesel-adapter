@@ -46,6 +46,7 @@ jobs:
           DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
         with:
           args: --out Xml
+          version: 0.12.3
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1

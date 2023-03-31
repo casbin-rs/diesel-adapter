@@ -14,6 +14,7 @@ async-trait = "0.1.42"
 casbin      = { version = "2.0.6", default-features = false }
 diesel      = { version = "2.0.3", default-features = false, features = ["r2d2"] }
 futures     = "0.3"
+libsqlite3-sys = { version = "0.22.2", features = ["bundled"] }
 tokio       = { version = "1.1.1", default-features = false, optional = true }
 once_cell = "1.5.2"
 
@@ -22,7 +23,7 @@ default = ["postgres", "runtime-tokio"]
 
 mysql    = ["diesel/mysql"]
 postgres = ["diesel/postgres"]
-sqlite   = ["diesel/sqlite"]
+sqlite   = ["diesel/sqlite", "libsqlite3-sys/bundled"]
 
 runtime-async-std = ["casbin/runtime-async-std", "async-std/unstable"]
 runtime-tokio     = ["casbin/runtime-tokio", "tokio/rt"]
