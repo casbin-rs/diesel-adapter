@@ -9,9 +9,11 @@ Diesel Adapter is the [Diesel](https://github.com/diesel-rs/diesel) adapter for 
 
 Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported databases are:
 
-- [Mysql](https://www.mysql.com/)
-- [Postgres](https://github.com/lib/pq)
+- [MySQL](https://www.mysql.com/)
+- [PostgreSQL](https://github.com/lib/pq)
 - [SQLite](https://www.sqlite.org)
+
+*Attention*: `postgres`, `mysql`, `sqlite` are mutual exclusive which means that you can only activate one of them.
 
 ## Notice
 In order to unify the database table name in Casbin ecosystem, we decide to use `casbin_rule` instead of `casbin_rules` from version `0.9.0`. If you are using old version `diesel-adapter` in your production environment, please use following command and update `diesel-adapter` version:
@@ -65,11 +67,3 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
-
-## Features
-
-- `postgres`
-- `mysql`
-- `sqlite`
-
-*Attention*: `postgres`, `mysql`, `sqlite` are mutual exclusive which means that you can only activate one of them.
