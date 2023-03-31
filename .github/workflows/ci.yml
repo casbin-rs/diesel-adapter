@@ -124,7 +124,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-default-features --features sqlite,runtime-async-std --target x86_64-pc-windows-msvc
+          args: --no-default-features --features sqlite,runtime-async-std
 
       - name: Cargo Test For SQLite,tokio
         uses: actions-rs/cargo@v1
