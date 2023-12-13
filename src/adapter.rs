@@ -146,7 +146,7 @@ fn normalize_policy(casbin_rule: &CasbinRule) -> Option<Vec<String>> {
 
 #[async_trait]
 impl Adapter for DieselAdapter {
-    async fn load_policy(&self, m: &mut dyn Model) -> Result<()> {
+    async fn load_policy(&mut self, m: &mut dyn Model) -> Result<()> {
         let conn = self
             .pool
             .get()
