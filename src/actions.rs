@@ -133,7 +133,7 @@ pub fn remove_policies(mut conn: Pool, pt: &str, rules: Vec<Vec<String>>) -> Res
                 .and(v5.eq(&rule[5]));
 
             match diesel::delete(casbin_rule.filter(filter)).execute(conn) {
-                Ok(n) if n == 1 => continue,
+                Ok(1) => continue,
                 _ => return Err(DieselError::RollbackTransaction),
             }
         }
