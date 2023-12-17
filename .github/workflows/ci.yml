@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        os: [ ubuntu-latest, windows-latest ]
         rust: [ stable, beta, nightly ]
 
     steps:
@@ -44,24 +44,6 @@ jobs:
           sudo apt-get update
           sudo apt-get -y install libmysqlclient-dev
           mysql -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on \`casbin\`.* to 'casbin_rs'@'localhost';" -uroot -proot
-
-      - name: Setup PostgreSQL & MySQL & SQLite (for macOS)
-        if: matrix.os == 'macOS-latest'
-        run: |
-          brew update
-          brew install mariadb@10.5 sqlite
-          mkdir -p /usr/local/var/postgres
-          initdb /usr/local/var/postgres
-          pg_ctl -D /usr/local/var/postgres start
-          sleep 3
-          createuser casbin_rs
-          createdb casbin
-          psql postgres -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
-          /usr/local/opt/mariadb@10.5/bin/mysql_install_db
-          /usr/local/opt/mariadb@10.5/bin/mysql.server start
-          sleep 3
-          /usr/local/opt/mariadb@10.5/bin/mysql -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on \`casbin\`.* to 'casbin_rs'@'localhost';" -urunner
-          echo "MYSQLCLIENT_LIB_DIR=/usr/local/opt/mariadb@10.5/lib" >> $GITHUB_ENV
 
       - name: Setup PostgreSQL & MySQL & SQLite (for windows)
         if: matrix.os == 'windows-latest'
