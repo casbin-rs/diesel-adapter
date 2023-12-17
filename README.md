@@ -16,6 +16,7 @@ Based on [Diesel](https://github.com/diesel-rs/diesel), The current supported da
 *Attention*: `postgres`, `mysql`, `sqlite` are mutual exclusive which means that you can only activate one of them.
 
 ## Notice
+
 In order to unify the database table name in Casbin ecosystem, we decide to use `casbin_rule` instead of `casbin_rules` from version `0.9.0`. If you are using old version `diesel-adapter` in your production environment, please use following command and update `diesel-adapter` version:
 
 ````SQL
