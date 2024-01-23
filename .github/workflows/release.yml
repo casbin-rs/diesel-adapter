@@ -21,7 +21,6 @@ jobs:
         run: |
           rustup set profile minimal
           rustup update --no-self-update stable
-          rustup component add --toolchain stable
           rustup default stable
 
       - name: Cargo Login
