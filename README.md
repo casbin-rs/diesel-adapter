@@ -1,4 +1,4 @@
-# diesel-adapter
+# Diesel Adapter for Casbin-RS (Rust)
 
 [![Crates.io](https://img.shields.io/crates/v/diesel-adapter.svg)](https://crates.io/crates/diesel-adapter)
 [![Docs](https://docs.rs/diesel-adapter/badge.svg)](https://docs.rs/diesel-adapter)
