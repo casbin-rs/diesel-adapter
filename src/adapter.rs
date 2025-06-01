@@ -31,6 +31,10 @@ impl DieselAdapter {
             .build(manager)
             .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))))?;
 
+        Self::with_pool(pool)
+    }
+
+    pub fn with_pool(pool: Pool<ConnectionManager<adapter::Connection>>) -> Result<Self> {
         let conn = pool
             .get()
             .map_err(|err| CasbinError::from(AdapterError(Box::new(Error::PoolError(err)))));
