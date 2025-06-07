@@ -38,11 +38,15 @@ jobs:
       - name: Install PostgreSQL Dependencies
         run: sudo apt-get install libpq-dev postgresql-client
 
+      - name: Install cargo-tarpaulin
+        run: |
+          echo "Installing cargo-tarpaulin..."
+          cargo install cargo-tarpaulin
+
       - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: 0.22.0
-          args: --out Xml
+        run: |
+          echo "Running tests with coverage..."
+          cargo tarpaulin --out Xml --verbose
         env:
           DATABASE_URL: postgres://casbin_rs:casbin_rs@127.0.0.1:5432/casbin
 
