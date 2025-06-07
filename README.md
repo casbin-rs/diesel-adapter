@@ -29,7 +29,7 @@ ALTER TABLE casbin_rules RENAME TO casbin_rule;
 Add it to `Cargo.toml`
 
 ```
-diesel-adapter = { version = "0.9.0", features = ["postgres"] }
+diesel-adapter = { version = "1.1.0", features = ["postgres"] }
 tokio = { version = "1.1.1", features = ["macros", "rt-multi-thread"] }
 ```
 **Warning**: `tokio v1.0` or later is supported from `diesel-adapter v0.9.0`, we recommend that you upgrade the relevant components to ensure that they work properly. The last version that supports `tokio v0.2` is `diesel-adapter v0.8.3` , you can choose according to your needs.
