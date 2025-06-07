@@ -28,7 +28,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
     conn.and_then(|mut conn| {
         sql_query(format!(
             r#"
-                CREATE TABLE IF NOT EXISTS {} (
+                CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                     id SERIAL PRIMARY KEY,
                     ptype VARCHAR NOT NULL,
                     v0 VARCHAR NOT NULL,
@@ -39,8 +39,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     v5 VARCHAR NOT NULL,
                     CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 );
-            "#,
-            TABLE_NAME
+            "#
         ))
         .execute(&mut conn)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
@@ -52,7 +51,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
     conn.and_then(|mut conn| {
         sql_query(format!(
             r#"
-                CREATE TABLE IF NOT EXISTS {} (
+                CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                     id INT NOT NULL AUTO_INCREMENT,
                     ptype VARCHAR(12) NOT NULL,
                     v0 VARCHAR(128) NOT NULL,
@@ -64,8 +63,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     PRIMARY KEY(id),
                     CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-            "#,
-            TABLE_NAME
+            "#
         ))
         .execute(&mut conn)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
@@ -77,7 +75,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
     conn.and_then(|mut conn| {
         sql_query(format!(
             r#"
-                CREATE TABLE IF NOT EXISTS {} (
+                CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                     id INTEGER PRIMARY KEY,
                     ptype VARCHAR(12) NOT NULL,
                     v0 VARCHAR(128) NOT NULL,
@@ -88,8 +86,7 @@ pub fn new(conn: Result<Pool>) -> Result<usize> {
                     v5 VARCHAR(128) NOT NULL,
                     CONSTRAINT unique_key_diesel_adapter UNIQUE(ptype, v0, v1, v2, v3, v4, v5)
                 );
-            "#,
-            TABLE_NAME
+            "#
         ))
         .execute(&mut conn)
         .map_err(|err| AdapterError(Box::new(Error::DieselError(err))).into())
