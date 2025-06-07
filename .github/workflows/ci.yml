@@ -39,6 +39,7 @@ jobs:
           sudo -u postgres createuser casbin_rs
           sudo -u postgres createdb casbin
           sudo -u postgres psql -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
+          sudo -u postgres psql -d casbin -c "GRANT CREATE ON SCHEMA public TO casbin_rs;"
           sudo service postgresql restart && sleep 3
           sudo systemctl start mysql.service
           sudo apt-get update
@@ -54,6 +55,7 @@ jobs:
           "C:\Program Files\PostgreSQL\11\bin\createuser" casbin_rs
           "C:\Program Files\PostgreSQL\11\bin\createdb" casbin
           "C:\Program Files\PostgreSQL\11\bin\psql" -c "alter user casbin_rs with encrypted password 'casbin_rs'; grant all privileges on database casbin to casbin_rs;"
+          "C:\Program Files\PostgreSQL\11\bin\psql" -d casbin -c "GRANT CREATE ON SCHEMA public TO casbin_rs;"
           "C:\tools\mysql\current\bin\mysql" -e "create user 'casbin_rs'@'localhost' identified by 'casbin_rs'; create database casbin; grant all on `casbin`.* to 'casbin_rs'@'localhost';" -uroot
           cd /D C:\ProgramData\chocolatey\lib\SQLite\tools
           dir "C:\Program Files\Microsoft Visual Studio"
