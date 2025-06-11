@@ -2,7 +2,7 @@
 authors     = ["Cheng JIANG <jiang.cheng@vip.163.com>"]
 description = "Diesel adapter for casbin-rs"
 edition     = "2018"
-homepage    = "https://github.com/casbin-rs/diesel-adapter"
+repository  = "https://github.com/casbin-rs/diesel-adapter"
 license     = "Apache-2.0"
 name        = "diesel-adapter"
 readme      = "README.md"
